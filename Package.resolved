@@ -121,8 +121,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/gematik/ref-OpenHealthCardKit",
       "state" : {
-        "revision" : "1831d7e1ee5725c1dfe8d44a4c8e044c17f79494",
-        "version" : "5.11.0"
+        "revision" : "32aa9e3c77870ccbe8cd1b9289da2fe270a146d6",
+        "version" : "5.11.2"
       }
     },
     {
