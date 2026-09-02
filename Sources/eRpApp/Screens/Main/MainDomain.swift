@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import CasePaths
@@ -22,6 +26,7 @@ import ComposableArchitecture
 import eRpKit
 import Foundation
 import IDP
+import SwiftUI
 
 // swiftlint:disable type_body_length file_length
 @Reducer
@@ -44,8 +49,6 @@ struct MainDomain {
         case prescriptionArchive(PrescriptionArchiveDomain)
         // sourcery: AnalyticsScreen = prescriptionDetail
         case prescriptionDetail(PrescriptionDetailDomain)
-        // sourcery: AnalyticsScreen = redeem_methodSelection
-        case redeemMethods(RedeemMethodsDomain)
         // sourcery: AnalyticsScreen = main_medicationReminder
         case medicationReminder(MedicationReminderOneDaySummaryDomain)
         // sourcery: AnalyticsScreen = main_welcomeDrawer
@@ -58,6 +61,10 @@ struct MainDomain {
         @ReducerCaseEphemeral
         // sourcery: AnalyticsScreen = alert
         case toast(ToastState<Toast>)
+        // sourcery: AnalyticsScreen = digasMain
+        case diGaDetail(DiGaDetailDomain)
+        // sourcery: AnalyticsScreen = main_osDeprecationDrawer
+        case osDeprecation(OSDeprecationDomain)
 
         enum Alert {
             case dismiss
@@ -78,7 +85,14 @@ struct MainDomain {
     @ObservableState
     struct State: Equatable {
         var isDemoMode = false
+        // Delete this after iOS 16 deprecation
+        var showIOS16DeprecationBanner: Bool {
+            ProcessInfo().operatingSystemVersion.majorVersion == 16
+        }
+
         @Presents var destination: Destination.State?
+
+        var path = StackState<Path.State>()
 
         // Child domain states
         var prescriptionListState: PrescriptionListDomain.State
@@ -113,6 +127,10 @@ struct MainDomain {
         case subscribeToDemoModeChange
         /// Tapping the demo mode banner can also turn the demo mode off
         case turnOffDemoMode
+        /// Tapping the OS deprecation banner shows more information
+        case osDeprecationBannerTapped
+        case gkvInsuredButtonTapped
+        case pkvInsuredButtonTapped
         case externalLogin(URL)
         case importTaskByUrl(URL)
         case showDrawer
@@ -120,8 +138,11 @@ struct MainDomain {
         case grantChargeItemsConsentDismiss
         case refreshPrescription
         case destination(PresentationAction<Destination.Action>)
+        case path(StackActionOf<Path>)
         case setNavigation(tag: Bool?)
         case startCardWall
+        case redeemPrescriptions(_ prescriptions: Shared<[Prescription]>)
+        case redeemFromPharmacy(_ pharmacy: PharmacyLocation, option: RedeemOption)
         case response(Response)
 
         // Child Domain Actions
@@ -133,10 +154,20 @@ struct MainDomain {
             case loadDeviceSecurityViewReceived(DeviceSecurityDomain.State?)
             case demoModeChangeReceived(Bool)
             case importReceived(Result<[ErxTask], Error>)
-            case showDrawer(MainDomain.Environment.DrawerEvaluationResult)
+            case showDrawer(DrawerEvaluation.DrawerEvaluationResult)
             case grantChargeItemsConsentActivate(ChargeItemConsentService.GrantResult)
             case showUpdateAlertResponse(Bool)
         }
+    }
+
+    @Reducer(state: .equatable, action: .equatable)
+    enum Path {
+        // sourcery: AnalyticsScreen = redeem_methodSelection
+        case redeemMethods(RedeemMethodsDomain)
+        // sourcery: AnalyticsScreen = redeem_overview
+        case redeem(PharmacyRedeemDomain)
+        // sourcery: AnalyticsScreen = pharmacySearch
+        case pharmacy(PharmacySearchDomain)
     }
 
     // sourcery: CodedError = "015"
@@ -158,6 +189,7 @@ struct MainDomain {
     @Dependency(\.erxTaskRepository) var erxTaskRepository: ErxTaskRepository
     @Dependency(\.userSession) var userSession: UserSession
     @Dependency(\.changeableUserSessionContainer) var userSessionContainer: UsersSessionContainer
+    @Dependency(\.userProfileService) var userProfileService: UserProfileService
     @Dependency(\.fhirDateFormatter) var fhirDateFormatter: FHIRDateFormatter
     @Dependency(\.userDataStore) var userDataStore: UserDataStore
     @Dependency(\.deviceSecurityManager) var deviceSecurityManager
@@ -165,6 +197,7 @@ struct MainDomain {
     @Dependency(\.chargeItemConsentService) var chargeItemConsentService: ChargeItemConsentService
     @Dependency(\.profileDataStore) var profileDataStore
     @Dependency(\.router) var router: Routing
+    @Dependency(\.drawerEvaluation) var drawerEvaluation: DrawerEvaluation
 
     var environment: Environment {
         .init(
@@ -194,6 +227,7 @@ struct MainDomain {
         }
 
         Reduce(self.core)
+            .forEach(\.path, action: \.path)
             .ifLet(\.$destination, action: \.destination)
     }
 
@@ -204,6 +238,11 @@ struct MainDomain {
             return .run { _ in
                 await environment.router.routeTo(.settings(nil))
             }
+        case .osDeprecationBannerTapped:
+            state.destination = .osDeprecation(
+                OSDeprecationDomain.State(version: "16")
+            )
+            return .none
         case let .prescriptionList(action: .profilePictureViewTapped(profile)):
             state.destination = .editProfilePicture(
                 EditProfilePictureDomain.State(
@@ -328,27 +367,49 @@ struct MainDomain {
         case let .prescriptionList(action: .response(.showCardWallReceived(cardWallState))):
             state.destination = .cardWall(cardWallState)
             return .none
+        case .prescriptionList(action: .response(.showInsuranceTypeSelectionSheetReceived)):
+            state.destination = .welcomeDrawer
+            return .none
+        case let .prescriptionList(action: .diGaDetailViewTapped(prescription, profile)):
+            guard let diGaInfo = prescription.erxTask.deviceRequest?.diGaInfo else { return .none }
+            state.destination = .diGaDetail(DiGaDetailDomain.State(
+                diGaTask: .init(prescription: prescription),
+                diGaInfo: diGaInfo,
+                profile: profile
+            ))
+            return .none
         case let .prescriptionList(action: .prescriptionDetailViewTapped(prescription)):
             state.destination = .prescriptionDetail(PrescriptionDetailDomain.State(
                 prescription: prescription,
                 isArchived: prescription.isArchived
             ))
             return .none
+        case .destination(.presented(.diGaDetail(action: .delegate(.closeFromDelete)))):
+            state.destination = nil
+            return .none
         case let .prescriptionList(action: .redeemButtonTapped(openPrescriptions)):
-            state.destination = .redeemMethods(
-                RedeemMethodsDomain
-                    .State(prescriptions: Shared(openPrescriptions.filter(\.isRedeemable)))
-            )
+            state.destination = nil
+            if openPrescriptions.filter(\.isDiGaPrescription).count >= 1,
+               openPrescriptions.filter({ !$0.isDiGaPrescription }).isEmpty {
+                // redeem DiGa
+                return .none
+            }
+            state.path.append(.redeemMethods(RedeemMethodsDomain.State(
+                prescriptions: openPrescriptions.filter(\.isPharmacyRedeemable)
+            )))
             return .none
         case .prescriptionList(action: .showArchivedButtonTapped):
             state.destination = .prescriptionArchive(.init())
             return .none
-        case .destination(.presented(.redeemMethods(action: .delegate(.close)))),
-             .destination(.presented(.cardWall(action: .delegate(.close)))):
+        case .destination(.presented(.cardWall(action: .delegate(.close)))),
+             .extAuthPending(action: .hide):
             state.destination = nil
             return .send(.prescriptionList(action: .loadRemotePrescriptionsAndSave))
         case .destination(.presented(.prescriptionArchive(action: .delegate(.close)))),
              .destination(.presented(.prescriptionDetail(action: .delegate(.close)))):
+            state.destination = nil
+            return .none
+        case .destination(.presented(.osDeprecation(action: .delegate(.continueWithAppButtonTapped)))):
             state.destination = nil
             return .none
         case let .horizontalProfileSelection(action: .response(.loadReceived(.failure(error)))):
@@ -364,15 +425,42 @@ struct MainDomain {
             guard state.destination == nil
             else { return .none }
             return .run { send in
-                await send(.response(.showDrawer(environment.showDrawerEvaluation())))
+                await send(.response(.showDrawer(drawerEvaluation.showDrawerEvaluation())))
+            }
+        case .gkvInsuredButtonTapped:
+            guard let profileId = state.horizontalProfileSelectionState.selectedProfileId else {
+                return .none
             }
 
+            return .run { send in
+                _ = try await userProfileService
+                    .update(profileId: profileId) { profile in
+                        profile.insuranceType = .gKV
+                    }
+                    .async()
+                await send(.startCardWall)
+            }
+        case .pkvInsuredButtonTapped:
+            guard let profileId = state.horizontalProfileSelectionState.selectedProfileId else {
+                return .none
+            }
+
+            return .run { send in
+                _ = try await userProfileService
+                    .update(profileId: profileId) { profile in
+                        profile.insuranceType = .pKV
+                    }
+                    .async()
+                await send(.startCardWall)
+            }
         case let .response(.showDrawer(drawerEvaluationResult)):
             switch drawerEvaluationResult {
             case .welcomeDrawer:
                 state.destination = .welcomeDrawer
-                environment.userDataStore.hideWelcomeDrawer = true
-                return .none
+                // welcome drawer has been shown to this profile
+                return .run { _ in
+                    _ = try await environment.setHideWelcomeDrawerOnMainViewToTrue()
+                }
             case .consentDrawer:
                 state.destination = .grantChargeItemConsentDrawer
                 // memorise the fact that the consent drawer has been shown to this profile
@@ -382,7 +470,6 @@ struct MainDomain {
             case .none:
                 return .none
             }
-
         case .grantChargeItemsConsentActivate,
              .destination(.presented(.alert(.retryGrantChargeItemConsent))):
 
@@ -454,7 +541,11 @@ struct MainDomain {
             switch delegateAction {
             case .close:
                 state.destination = nil
-                return .none
+                return .run { send in
+                    // wait for running effects to finish
+                    try await schedulers.main.sleep(for: 0.5)
+                    await send(.showDrawer)
+                }
             case let .failure(error):
                 state.destination = .alert(
                     .init(for: error, actions: {
@@ -500,24 +591,94 @@ struct MainDomain {
             return .run { _ in
                 await environment.router.routeTo(.settings(.unlockCard))
             }
-
-        case let .destination(.presented(.prescriptionDetail(action: .delegate(.redeem(task))))):
-            let prescriptions = Shared([task])
-            state.destination = .redeemMethods(
-                RedeemMethodsDomain
-                    .State(
-                        prescriptions: prescriptions,
-                        destination: .pharmacySearch(.init(
-                            selectedPrescriptions: prescriptions,
-                            inRedeemProcess: true,
-                            pharmacyRedeemState: Shared(nil)
-                        ))
+        case let .destination(.presented(.prescriptionDetail(action: .delegate(.redeem(prescription))))):
+            state.destination = nil
+            let prescriptions = Shared(value: [prescription])
+            return .run { send in
+                // wait for running effects to finish
+                try await schedulers.main.sleep(for: 0.05)
+                await send(.redeemPrescriptions(prescriptions))
+            }
+        case let .path(.element(id: _, action: .redeemMethods(.delegate(delegate)))):
+            switch delegate {
+            case let .redeemOverview(prescriptions):
+                let prescriptions = Shared(value: prescriptions)
+                return .send(.redeemPrescriptions(prescriptions))
+            case .close:
+                guard !state.path.isEmpty else {
+                    reportIssue(
+                        "RedeemMethodsDomain was closed but no redeem path is available. This should not happen."
                     )
-            )
-
+                    return .none
+                }
+                state.path.removeLast()
+                return .none
+            }
+        case let .path(.element(id: _, action: .pharmacy(
+            .destination(.presented(
+                .pharmacyDetail(.delegate(.redeem(
+                    prescriptions: _,
+                    selectedPrescriptions: _,
+                    pharmacy: pharmacy,
+                    option: redeemOption
+                )))
+            ))
+        ))),
+        let .path(.element(id: _, action: .pharmacy(
+            .destination(.presented(
+                .pharmacyMapSearch(.destination(.presented(
+                    .pharmacy(.delegate(.redeem(
+                        prescriptions: _,
+                        selectedPrescriptions: _,
+                        pharmacy: pharmacy,
+                        option: redeemOption
+                    )))
+                )))
+            ))
+        ))):
+            return .run { send in
+                // wait for running effects to finish
+                try await schedulers.main.sleep(for: 0.05)
+                await send(.redeemFromPharmacy(pharmacy, option: redeemOption))
+            }
+        case let .redeemPrescriptions(prescriptions):
+            state.path.append(.redeem(PharmacyRedeemDomain.State(
+                prescriptions: prescriptions,
+                selectedPrescriptions: Shared(value: prescriptions.wrappedValue)
+            )))
             return .none
+        case let .redeemFromPharmacy(pharmacy, option: redeemOption):
+            guard !state.path.isEmpty else {
+                reportIssue("state.path is empty but should not be empty here. This should not happen.")
+                return .none
+            }
+            state.path.removeLast()
 
+            guard let redeemId = state.path.ids.last
+            else { return .none }
+            state.path[id: redeemId, case: \.redeem]?.pharmacy = pharmacy
+            state.path[id: redeemId, case: \.redeem]?.serviceOptionState.selectedOption = redeemOption
+            return .none
+        case let .path(.element(id: _, action: .redeem(.delegate(delegate)))):
+            switch delegate {
+            case .close:
+                state.path.removeAll()
+                return .send(.prescriptionList(action: .loadRemotePrescriptionsAndSave))
+            case .changePharmacy:
+                state.path.append(.pharmacy(PharmacySearchDomain.State(
+                    selectedPrescriptions: Shared(value: []),
+                    inRedeemProcess: true
+                )))
+            }
+            return .none
+        case .path(.element(id: _, action: .pharmacy(.delegate(.close)))),
+             .path(.element(id: _,
+                            action: .pharmacy(.destination(.presented(.pharmacyMapSearch(.delegate(.close))))))),
+             .path(.element(id: _, action: .pharmacy(.destination(.presented(.pharmacyDetail(.delegate(.close))))))):
+            state.path.removeAll()
+            return .none
         case .destination,
+             .path,
              .setNavigation,
              .prescriptionList,
              .extAuthPending,

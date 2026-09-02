@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -30,9 +34,9 @@ public protocol AVSSession {
     ///   - message: contains the information for redeeming of a prescription
     ///   - endpoint: (wrapped) `URL` to send the request to
     ///   - recipients: the message will potentially be prepared (encrypted) for them
-    /// - Returns: `AnyPublisher` that emits the sent `AVSMessage` if successful, else `AVSError`
-    func redeem(message: AVSMessage, endpoint: AVSEndpoint, recipients: [X509])
-        -> AnyPublisher<AVSSessionResponse, AVSError>
+    /// - Note: Only `AVSError`s are supposed to be thrown
+    /// - Returns: The sent `AVSMessage` if successful, else `AVSError`
+    func redeem(message: AVSMessage, endpoint: AVSEndpoint, recipients: [X509]) async throws -> AVSSessionResponse
 }
 
 /// Contains the response information from an `AVSSession`
@@ -59,7 +63,7 @@ public class DefaultAVSSession: AVSSession {
     let logger: ((AVSMessage, AVSEndpoint, HTTPResponse) -> Void)?
 
     public convenience init(
-        httpClient: HTTPClient = DefaultHTTPClient(urlSessionConfiguration: .ephemeral),
+        httpClient: HTTPClient,
         logger: ((AVSMessage, AVSEndpoint, HTTPResponse) -> Void)? = nil
     ) {
         self.init(
@@ -83,32 +87,25 @@ public class DefaultAVSSession: AVSSession {
         message: AVSMessage,
         endpoint: AVSEndpoint,
         recipients: [X509]
-    ) -> AnyPublisher<AVSSessionResponse, AVSError> {
-        Just((message, recipients))
-            .tryMap(avsMessageConverter.convert)
-            .mapError {
-                $0.asAVSError()
+    ) async throws -> AVSSessionResponse {
+        do {
+            let restMessage = try avsMessageConverter.convert(message, recipients: recipients)
+            let httpResponse = try await avsClient.send(data: restMessage, to: endpoint)
+
+            logger?(message, endpoint, httpResponse)
+
+            guard httpResponse.status.isSuccessful else {
+                let urlError = URLError(URLError.Code(rawValue: httpResponse.status.rawValue))
+                throw HTTPClientError.httpError(urlError)
             }
-            .flatMap { restMessage -> AnyPublisher<AVSSessionResponse, AVSError> in
-                self.avsClient.send(data: restMessage, to: endpoint)
-                    // swiftlint:disable:previous trailing_closure
-                    .handleEvents(receiveOutput: { [weak self] response in
-                        self?.logger?(message, endpoint, response)
-                    })
-                    .tryMap { httpResponse in
-                        guard httpResponse.status.isSuccessful else {
-                            let urlError = URLError(URLError.Code(rawValue: httpResponse.status.rawValue))
-                            throw HTTPClientError.httpError(urlError)
-                        }
-                        return .init(
-                            message: message,
-                            httpStatusCode: httpResponse.status.rawValue
-                        )
-                    }
-                    .mapError { $0.asAVSError() }
-                    .eraseToAnyPublisher()
-            }
-            .eraseToAnyPublisher()
+
+            return .init(
+                message: message,
+                httpStatusCode: httpResponse.status.rawValue
+            )
+        } catch {
+            throw error.asAVSError()
+        }
     }
 }
 
@@ -119,9 +116,7 @@ public class DemoAVSSession: AVSSession {
         message: AVSMessage,
         endpoint _: AVSEndpoint,
         recipients _: [X509]
-    ) -> AnyPublisher<AVSSessionResponse, AVSError> {
-        Just(.init(message: message, httpStatusCode: 200))
-            .setFailureType(to: AVSError.self)
-            .eraseToAnyPublisher()
+    ) async throws -> AVSSessionResponse {
+        .init(message: message, httpStatusCode: 200)
     }
 }

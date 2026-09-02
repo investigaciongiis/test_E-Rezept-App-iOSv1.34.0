@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -42,7 +46,8 @@ public protocol HTTPClient {
     /// - Parameter interceptors: per request interceptors.
     /// - Parameter handler: handler that should be called in case of redirect.
     /// - Returns: `AnyPublisher` that emits a response as `HTTPResponse`
-    func send(request: URLRequest, interceptors: [Interceptor], redirect handler: RedirectHandler?)
+    @available(*, deprecated, message: "Use async version instead")
+    func sendPublisher(request: URLRequest, interceptors: [Interceptor], redirect handler: RedirectHandler?)
         -> AnyPublisher<HTTPResponse, HTTPClientError>
 
     /// Send the given request. The request will be processed by the list of `Interceptors`.
@@ -67,8 +72,29 @@ extension HTTPClient {
     ///
     /// - Parameter request: The request to be (modified and) sent.
     /// - Parameter interceptors: per request interceptors.
+    /// - Parameter handler: handler that should be called in case of redirect.
     /// - Returns: `AnyPublisher` that emits a response as `HTTPResponse`
-    public func send(request: URLRequest, interceptors: [Interceptor]) -> AnyPublisher<HTTPResponse, HTTPClientError> {
+    @available(
+        *,
+        deprecated,
+        renamed: "sendPublisher(request:interceptors:redirect:)",
+        message: "Use async version instead"
+    )
+    func send(request: URLRequest, interceptors: [Interceptor], redirect handler: RedirectHandler?)
+        -> AnyPublisher<HTTPResponse, HTTPClientError> {
+        sendPublisher(request: request, interceptors: interceptors, redirect: handler)
+    }
+}
+
+extension HTTPClient {
+    /// Send the given request. The request will be processed by the list of `Interceptors`.
+    ///
+    /// - Parameter request: The request to be (modified and) sent.
+    /// - Parameter interceptors: per request interceptors.
+    /// - Returns: `AnyPublisher` that emits a response as `HTTPResponse`
+    @available(*, deprecated, message: "Use async version instead")
+    public func sendPublisher(request: URLRequest,
+                              interceptors: [Interceptor]) -> AnyPublisher<HTTPResponse, HTTPClientError> {
         send(request: request, interceptors: interceptors, redirect: nil)
     }
 
@@ -76,8 +102,9 @@ extension HTTPClient {
     ///
     /// - Parameter request: The request to be (modified and) sent.
     /// - Returns: `AnyPublisher` that emits a response as `HTTPResponse`
-    public func send(request: URLRequest) -> AnyPublisher<HTTPResponse, HTTPClientError> {
-        send(request: request, interceptors: [])
+    @available(*, deprecated, message: "Use async version instead")
+    public func sendPublisher(request: URLRequest) -> AnyPublisher<HTTPResponse, HTTPClientError> {
+        sendPublisher(request: request, interceptors: [])
     }
 
     /// Send the given request. The request will be processed by the list of `Interceptors`.

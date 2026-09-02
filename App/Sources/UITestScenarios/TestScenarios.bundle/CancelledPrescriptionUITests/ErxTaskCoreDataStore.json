@@ -15,13 +15,11 @@
                         "qualification": "doctor"
                     },
                     "prescriptionId": "1234",
+                    "isEURedeemable" : false,
+                    "isSetEURedeemableByPatient" : false,
                     "communications":
                     [],
-                    "flowType":
-                    {
-                        "pharmacyOnly":
-                        {}
-                    },
+                    "flowType": "160",
                     "author": "Les Moore",
                     "source": "server",
                     "medication":
@@ -63,7 +61,7 @@
                         "substitutionAllowed": true,
                         "coPaymentStatus": "0",
                         "dosageInstructions": "1-0-2-0-0-3-1",
-                        "bvg": true,
+                        "ser": true,
                         "quantity":
                         {
                             "unit": "{Package}",

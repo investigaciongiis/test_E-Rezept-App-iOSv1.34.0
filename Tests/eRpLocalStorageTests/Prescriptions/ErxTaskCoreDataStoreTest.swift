@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -640,7 +644,7 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
 
         try store.add(communications: [updatedCommunication])
 
-        expect(receivedValues.count) == 2
+        expect(receivedValues.count) == 3
         expect(receivedValues[0].count) == 1
         expect(receivedValues[0].first) == communication1
         expect(receivedValues[1].count) == 1 // must be 1 otherwise update failed
@@ -742,7 +746,7 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
         try prepareStores(profiles: [testProfile], communications: [communication2, communication3])
 
         let store = loadErxCoreDataStore(for: testProfile.id)
-        let task = ErxTask(identifier: communication1.taskId, status: .ready)
+        let task = ErxTask(identifier: communication1.taskId, status: .ready, flowType: .pharmacyOnly)
         try store.add(tasks: [task]) // there must be a related task with a relationship to the profile
         try store.add(communications: [communication1])
 
@@ -767,7 +771,7 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
         try prepareStores(profiles: [testProfile], communications: [])
 
         let store = loadErxCoreDataStore(for: testProfile.id)
-        let task = ErxTask(identifier: communication1.taskId, status: .ready)
+        let task = ErxTask(identifier: communication1.taskId, status: .ready, flowType: .pharmacyOnly)
         try store.add(tasks: [task])
         try store.add(communications: [communication0, communication1])
 
@@ -790,7 +794,7 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
         try prepareStores(profiles: [testProfile], communications: [])
 
         let store = loadErxCoreDataStore(for: testProfile.id)
-        let task = ErxTask(identifier: communication1.taskId, status: .ready)
+        let task = ErxTask(identifier: communication1.taskId, status: .ready, flowType: .pharmacyOnly)
         try store.add(tasks: [task])
         try store.add(communications: [communication0])
 
@@ -868,13 +872,14 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
                                     strength: nil,
                                     strengthFreeText: nil)]
             ),
-            epaMedication: nil
+            epaMedication: nil,
+            diGaDispense: nil
         )
 
         // when updating the same medication dispense (when taskId is equal)
         try store.add(medicationDispenses: [updatedMedicationDispense])
 
-        expect(receivedValues.count) == 2
+        expect(receivedValues.count) == 3
         expect(receivedValues[0].count) == 1
         expect(receivedValues[0].first) == ErxTask.Fixtures.medicationDispense
         expect(receivedValues[1].count) == 1 // must be 1 otherwise update failed
@@ -912,7 +917,7 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
         let medicationDispense = ErxTask.Fixtures.medicationDispense
 
         let store = loadErxCoreDataStore(for: testProfile.id)
-        let task = ErxTask(identifier: medicationDispense.taskId, status: .ready)
+        let task = ErxTask(identifier: medicationDispense.taskId, status: .ready, flowType: .pharmacyOnly)
         try store.add(medicationDispenses: [ErxTask.Fixtures.medicationDispense])
         try store.add(tasks: [task]) // there must be a related task with a relationship to the profile
 
@@ -941,7 +946,11 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
         // when accessing the store with a profile and saving a communication to that profile
         let store = loadErxCoreDataStore(for: testProfile.id)
 
-        let task = ErxTask(identifier: ErxTask.Fixtures.medicationDispenseWithPZN.taskId, status: .ready)
+        let task = ErxTask(
+            identifier: ErxTask.Fixtures.medicationDispenseWithPZN.taskId,
+            status: .ready,
+            flowType: .pharmacyOnly
+        )
         try store.add(medicationDispenses: [ErxTask.Fixtures.medicationDispenseWithPZN])
         try store.add(tasks: [task]) // there must be a related task with a relationship to the profile
 
@@ -1029,7 +1038,7 @@ final class ErxTaskCoreDataStoreTest: XCTestCase {
 
         try store.add(chargeItems: [updatedChargeItem])
 
-        expect(receivedValues.count) == 2
+        expect(receivedValues.count) == 3
         expect(receivedValues[0].count) == 1
         expect(receivedValues[0].first) == chargeItemInStore
         expect(receivedValues[1].count) == 1 // must be 1 otherwise update failed

@@ -125,7 +125,7 @@ GEM
     faraday_middleware (1.2.0)
       faraday (~> 1.0)
     fastimage (2.3.1)
-    fastlane (2.221.1)
+    fastlane (2.228.0)
       CFPropertyList (>= 2.3, < 4.0.0)
       addressable (>= 2.8, < 3.0.0)
       artifactory (~> 3.0)
@@ -166,7 +166,6 @@ GEM
       xcodeproj (>= 1.13.0, < 2.0.0)
       xcpretty (~> 0.3.0)
       xcpretty-travis-formatter (>= 0.0.3, < 2.0.0)
-    fastlane-plugin-appcenter (2.1.2)
     ffi (1.17.0)
     fourflusher (2.3.1)
     fuzzy_match (2.0.4)
@@ -314,7 +313,6 @@ PLATFORMS
 
 DEPENDENCIES
   fastlane (~> 2.220)
-  fastlane-plugin-appcenter
   jazzy (~> 0.14.4)
   kramdown
   nokogiri (>= 1.16.5)

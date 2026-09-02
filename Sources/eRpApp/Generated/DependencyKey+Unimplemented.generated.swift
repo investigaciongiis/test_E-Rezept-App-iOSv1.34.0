@@ -2,6 +2,7 @@
 // DO NOT EDIT
 
 import AVS
+import BfArM
 import Combine
 import CombineSchedulers
 import CoreData
@@ -46,6 +47,15 @@ struct UnimplementedAppSecurityManager: AppSecurityManager {
     }
     func matches(password: String) throws -> Bool {
         fatalError("matches(password:) has not been implemented")
+    }
+    func registerFailedPasswordAttempt() throws -> Void {
+        fatalError("registerFailedPasswordAttempt has not been implemented")
+    }
+    func resetPasswordDelay() throws -> Void {
+        fatalError("resetPasswordDelay has not been implemented")
+    }
+    func currentPasswordDelay() throws -> TimeInterval {
+        fatalError("currentPasswordDelay has not been implemented")
     }
     func migrate() throws -> Void {
         fatalError("migrate has not been implemented")
@@ -193,6 +203,9 @@ struct UnimplementedErxTaskRepository: ErxTaskRepository {
     func saveLocal(communications: [ErxTask.Communication]) -> AnyPublisher<Bool, ErxRepositoryError> {
         fatalError("saveLocal(communications:) has not been implemented")
     }
+    func updateLocal(diGaInfo: DiGaInfo) -> AnyPublisher<Bool, ErxRepositoryError> {
+        fatalError("updateLocal(diGaInfo:) has not been implemented")
+    }
     func countAllUnreadCommunicationsAndChargeItems(for fhirProfile: ErxTask.Communication.Profile) -> AnyPublisher<Int, ErxRepositoryError> {
         fatalError("countAllUnreadCommunicationsAndChargeItems(for:) has not been implemented")
     }
@@ -307,9 +320,6 @@ struct UnimplementedIDPSession: IDPSession {
     func verifyAndExchange(signedChallenge: SignedChallenge, idTokenValidator: @escaping (TokenPayload.IDTokenPayload) -> Result<Bool, Error>) -> AnyPublisher<IDPToken, IDPError> {
         fatalError("verifyAndExchange(signedChallenge:idTokenValidator:) has not been implemented")
     }
-    func httpInterceptor(delegate: IDPSessionDelegate?) -> IDPInterceptor {
-        fatalError("httpInterceptor(delegate:) has not been implemented")
-    }
     func exchange(token: IDPExchangeToken, challengeSession: ChallengeSession) -> AnyPublisher<IDPToken, IDPError> {
         fatalError("exchange(token:challengeSession:) has not been implemented")
     }
@@ -423,6 +433,12 @@ struct UnimplementedPharmacyRepository: PharmacyRepository {
     }
     func loadAvsCertificates(for id: String) -> AnyPublisher<[X509], PharmacyRepositoryError> {
         fatalError("loadAvsCertificates(for:) has not been implemented")
+    }
+    func fetchInsurance(ikNumber: String) -> AnyPublisher<Insurance?, PharmacyRepositoryError> {
+        fatalError("fetchInsurance(ikNumber:) has not been implemented")
+    }
+    func fetchAllInsurances() -> AnyPublisher<[Insurance], PharmacyRepositoryError> {
+        fatalError("fetchAllInsurances has not been implemented")
     }
     func save(pharmacy: PharmacyLocation) -> AnyPublisher<Bool, PharmacyRepositoryError> {
         fatalError("save(pharmacy:) has not been implemented")
@@ -549,8 +565,14 @@ struct UnimplementedRedeemInputValidator: RedeemInputValidator {
     func ifDeliveryOrShipmentThenIsNonEmptyPhoneOrNonEmptyMail(optionType: RedeemOption, phone: String?, mail: String?) -> Validity {
         fatalError("ifDeliveryOrShipmentThenIsNonEmptyPhoneOrNonEmptyMail(optionType:phone:mail:) has not been implemented")
     }
+    func onPremiseOrElseIsNonEmptyContactData(optionType: RedeemOption, name: String?, street: String?, zip: String?, city: String?, phone: String?) -> Bool {
+        fatalError("onPremiseOrElseIsNonEmptyContactData(optionType:name:street:zip:city:phone:) has not been implemented")
+    }
     func validate(_ shipmentInfo: ShipmentInfo?, for redeemOption: RedeemOption) -> Validity {
         fatalError("validate(_:for:) has not been implemented")
+    }
+    func hasCompleteContactData(_ shipmentInfo: ShipmentInfo?, for redeemOption: RedeemOption) -> Bool {
+        fatalError("hasCompleteContactData(_:for:) has not been implemented")
     }
     func validate(_ contactInfo: PharmacyContactDomain.ContactInfo) -> Validity {
         fatalError("validate(_:) has not been implemented")
@@ -564,6 +586,9 @@ struct UnimplementedRedeemService: RedeemService {
 
     func redeem(_ orders: [OrderRequest]) -> AnyPublisher<IdentifiedArrayOf<OrderResponse>, RedeemServiceError> {
         fatalError("redeem(_:) has not been implemented")
+    }
+    func redeemDiGa(_ orders: [OrderDiGaRequest]) -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError> {
+        fatalError("redeemDiGa(_:) has not been implemented")
     }
 }
 struct UnimplementedRegisteredDevicesService: RegisteredDevicesService {
@@ -765,11 +790,6 @@ class UnimplementedUserDataStore: NSObject, UserDataStore {
     }
 
     var appStartCounter: Int {
-        get { fatalError("") }
-        set(value) { fatalError("") }
-    }
-
-    var hideWelcomeDrawer: Bool {
         get { fatalError("") }
         set(value) { fatalError("") }
     }

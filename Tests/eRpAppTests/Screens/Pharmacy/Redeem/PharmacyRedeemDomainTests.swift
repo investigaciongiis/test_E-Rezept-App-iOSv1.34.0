@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 import Combine
 import ComposableArchitecture
@@ -62,6 +66,13 @@ class PharmacyRedeemDomainTests: XCTestCase {
             dependencies.redeemService = mockRedeemService
             dependencies.serviceLocator = ServiceLocator()
             dependencies.pharmacyRepository = mockPharmacyRepository
+            dependencies.redeemOrderService.redeemViaAVS = { @Sendable [mockRedeemService] orders in
+                try await mockRedeemService?.redeem(orders).async() ?? []
+            }
+            dependencies.redeemOrderService.redeemViaErxTaskRepository = { @Sendable [mockRedeemService] orders in
+                try await mockRedeemService?.redeem(orders).async() ?? []
+            }
+            dependencies.redeemOrderInputValidator.type = { [mockRedeemValidator] _ in mockRedeemValidator }
             dependencies.date = DateGenerator.constant(Date.now)
             dependencies.calendar = Calendar.autoupdatingCurrent
         }
@@ -86,10 +97,14 @@ class PharmacyRedeemDomainTests: XCTestCase {
     func testRedeemingWhenNotLoggedIn() async {
         let inputTasks = Prescription.Fixtures.prescriptions
         let sut = testStore(for: PharmacyRedeemDomain.State(
-            redeemOption: .onPremise,
-            prescriptions: Shared(inputTasks),
+            prescriptions: Shared(value: inputTasks),
+            selectedPrescriptions: Shared(value: inputTasks),
             pharmacy: pharmacy,
-            selectedPrescriptions: Shared(inputTasks)
+            serviceOption: .erxTaskRepositoryAvailable,
+            serviceOptionState: .init(
+                prescriptions: Shared(value: inputTasks),
+                selectedOption: .onPremise
+            )
         ))
 
         let expectedShipmentInfo = ShipmentInfo(
@@ -139,20 +154,33 @@ class PharmacyRedeemDomainTests: XCTestCase {
 
     func testRedeemHappyPath() async {
         let inputTasks = Prescription.Fixtures.prescriptions
+        let pharmacy = pharmacy
         let initialState = PharmacyRedeemDomain.State(
-            redeemOption: .onPremise,
-            prescriptions: Shared(inputTasks),
+            prescriptions: Shared(value: inputTasks),
+            selectedPrescriptions: Shared(value: inputTasks),
             pharmacy: pharmacy,
-            selectedPrescriptions: Shared(inputTasks)
+            serviceOption: .erxTaskRepository,
+            serviceOptionState: .init(
+                prescriptions: Shared(value: inputTasks),
+                selectedOption: .onPremise
+            )
         )
         let sut = testStore(for: initialState)
 
+        let profile = Profile(name: "")
         let expectedShipmentInfo = shipmentInfo
         mockRedeemValidator.returnValue = .valid
         mockShipmentInfoDataStore.selectedShipmentInfo = Just(expectedShipmentInfo)
             .setFailureType(to: LocalStoreError.self).eraseToAnyPublisher()
         mockUserSession.isLoggedIn = true
-        mockPharmacyRepository.savePharmaciesReturnValue = Just(true).setFailureType(to: PharmacyRepositoryError.self)
+        mockUserSession.profileReturnValue = Just(profile)
+            .setFailureType(to: LocalStoreError.self)
+            .eraseToAnyPublisher()
+        mockPharmacyRepository.loadAvsCertificatesForReturnValue = Just([])
+            .setFailureType(to: PharmacyRepositoryError.self)
+            .eraseToAnyPublisher()
+        mockPharmacyRepository.savePharmaciesReturnValue = Just(true)
+            .setFailureType(to: PharmacyRepositoryError.self)
             .eraseToAnyPublisher()
 
         var expectedOrderResponses = IdentifiedArrayOf<OrderResponse>()
@@ -166,10 +194,24 @@ class PharmacyRedeemDomainTests: XCTestCase {
                 .eraseToAnyPublisher()
         }
 
-        await sut.send(.registerSelectedShipmentInfoListener)
+        await sut.send(.task)
+        await sut.receive(.registerSelectedShipmentInfoListener)
+        await sut.receive(.registerSelectedProfileListener)
+
         await sut.receive(.selectedShipmentInfoReceived(.success(expectedShipmentInfo))) {
             $0.selectedShipmentInfo = expectedShipmentInfo
         }
+
+        await sut.receive(.selectedProfileReceived(.success(profile))) {
+            $0.profile = profile
+        }
+        await sut
+            .receive(.redeemOptionProviderReceived(RedeemOptionProvider(wasAuthenticatedBefore: false,
+                                                                        pharmacy: pharmacy))) {
+                $0.serviceOption = .erxTaskRepositoryAvailable
+                $0.serviceOptionState.availableOptions = [.onPremise]
+                $0.hasCompleteContactData = true
+            }
 
         await sut.send(.redeem) { $0.redeemInProgress = true }
         await sut.receive(.redeemReceived(.success(expectedOrderResponses))) {
@@ -185,11 +227,11 @@ class PharmacyRedeemDomainTests: XCTestCase {
                 expect(response?.requested.phone) == expectedShipmentInfo.phone
                 expect(response?.requested.mail) == expectedShipmentInfo.mail
                 expect(response?.requested.text).to(beNil())
-                expect(response?.requested.redeemType) == initialState.redeemOption
+                expect(response?.requested.redeemType) == initialState.serviceOptionState.selectedOption
                 expect(response?.requested.accessCode) == task.accessCode
                 expect(response?.requested.telematikId) == self.pharmacy.telematikID
                 expect(response?.requested.endpoint) == self.pharmacy.avsEndpoints?.url(
-                    for: initialState.redeemOption,
+                    for: initialState.serviceOptionState.selectedOption,
                     transactionId: "",
                     telematikId: self.pharmacy.telematikID
                 )
@@ -202,10 +244,14 @@ class PharmacyRedeemDomainTests: XCTestCase {
         // given
         let inputTasks = Prescription.Fixtures.prescriptions
         let initialState = PharmacyRedeemDomain.State(
-            redeemOption: .onPremise,
-            prescriptions: Shared(inputTasks),
+            prescriptions: Shared(value: inputTasks),
+            selectedPrescriptions: Shared(value: inputTasks),
             pharmacy: pharmacy,
-            selectedPrescriptions: Shared(inputTasks)
+            serviceOption: .erxTaskRepository,
+            serviceOptionState: .init(
+                prescriptions: Shared(value: inputTasks),
+                selectedOption: .onPremise
+            )
         )
         let sut = testStore(for: initialState)
 
@@ -248,10 +294,14 @@ class PharmacyRedeemDomainTests: XCTestCase {
         // given
         let inputTasks = Prescription.Fixtures.prescriptions
         let initialState = PharmacyRedeemDomain.State(
-            redeemOption: .onPremise,
-            prescriptions: Shared(inputTasks),
+            prescriptions: Shared(value: inputTasks),
+            selectedPrescriptions: Shared(value: inputTasks),
             pharmacy: pharmacy,
-            selectedPrescriptions: Shared(inputTasks)
+            serviceOption: .erxTaskRepository,
+            serviceOptionState: .init(
+                prescriptions: Shared(value: inputTasks),
+                selectedOption: .onPremise
+            )
         )
         let sut = testStore(for: initialState)
 
@@ -278,10 +328,13 @@ class PharmacyRedeemDomainTests: XCTestCase {
         let inputTasks = Prescription.Fixtures.prescriptions
         let sut = testStore(
             for: PharmacyRedeemDomain.State(
-                redeemOption: .onPremise,
-                prescriptions: Shared(inputTasks),
+                prescriptions: Shared(value: inputTasks),
+                selectedPrescriptions: Shared(value: inputTasks),
                 pharmacy: pharmacy,
-                selectedPrescriptions: Shared(inputTasks)
+                serviceOptionState: .init(
+                    prescriptions: Shared(value: inputTasks),
+                    selectedOption: .onPremise
+                )
             )
         )
 
@@ -300,10 +353,13 @@ class PharmacyRedeemDomainTests: XCTestCase {
         let inputTasks = Prescription.Fixtures.prescriptions
         let sut = testStore(
             for: PharmacyRedeemDomain.State(
-                redeemOption: .shipment,
-                prescriptions: Shared(inputTasks),
+                prescriptions: Shared(value: inputTasks),
+                selectedPrescriptions: Shared(value: inputTasks),
                 pharmacy: pharmacy,
-                selectedPrescriptions: Shared(inputTasks)
+                serviceOptionState: .init(
+                    prescriptions: Shared(value: inputTasks),
+                    selectedOption: .shipment
+                )
             )
         )
 
@@ -358,10 +414,13 @@ class PharmacyRedeemDomainTests: XCTestCase {
 
         let sut = testStore(
             for: PharmacyRedeemDomain.State(
-                redeemOption: .shipment,
-                prescriptions: Shared(inputTasks),
+                prescriptions: Shared(value: inputTasks),
+                selectedPrescriptions: Shared(value: inputTasks),
                 pharmacy: pharmacy,
-                selectedPrescriptions: Shared(inputTasks)
+                serviceOptionState: .init(
+                    prescriptions: Shared(value: inputTasks),
+                    selectedOption: .shipment
+                )
             )
         )
         let selectionPrescriptionState = PharmacyPrescriptionSelectionDomain.State(
@@ -375,7 +434,7 @@ class PharmacyRedeemDomainTests: XCTestCase {
 
         await sut
             .send(.destination(.presented(.prescriptionSelection(.saveSelection([]))))) { sut in
-                sut.selectedPrescriptions = []
+                sut.$selectedPrescriptions.withLock { $0 = [] }
             }
 
         await sut.receive(.destination(.dismiss)) { sut in
@@ -389,6 +448,12 @@ class PharmacyRedeemDomainTests: XCTestCase {
 
 extension OrderRequest {
     static var fixture: OrderRequest = {
-        OrderRequest(redeemType: .shipment, taskID: "task_id_0", accessCode: "access_code_0", telematikId: "k123456789")
+        OrderRequest(
+            redeemType: .shipment,
+            flowType: "160",
+            taskID: "task_id_0",
+            accessCode: "access_code_0",
+            telematikId: "k123456789"
+        )
     }()
 }

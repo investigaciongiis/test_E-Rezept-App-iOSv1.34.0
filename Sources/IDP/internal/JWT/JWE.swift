@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -56,9 +60,9 @@ public struct JWE {
     ///   - payload: The payload of the JWE that will be encrypted
     ///   - nonceGenerator: Nonce used for generating the shared secret
     /// - Throws: If JWE encryption fails
-    init(header: Header,
-         payload: Data,
-         nonceGenerator: () throws -> Data) throws {
+    public init(header: Header,
+                payload: Data,
+                nonceGenerator: () throws -> Data) throws {
         self.payload = payload
         backing = try header.encryption.encrypt(payload: payload,
                                                 header: header,
@@ -133,7 +137,7 @@ extension JWE {
 }
 
 extension JWE {
-    struct Header: Encodable {
+    public struct Header: Encodable {
         /// algorithm used for encrypting the JWE
         var alg: String
         /// Encryption type
@@ -160,7 +164,7 @@ extension JWE {
         /// Key material used for encryption
         let encryptionContext: EncryptionContext
 
-        init(
+        public init(
             algorithm: Algorithm,
             encryption: Encryption,
             expiry: Date? = nil,
@@ -203,7 +207,7 @@ extension JWE {
             case epk
         }
 
-        func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
 
             try container.encode(enc, forKey: .enc)
@@ -243,7 +247,9 @@ extension JWK {
 extension JWE {
     private static let delimiter = UInt8(0x2E)
 
-    func encoded() -> Data {
+    /// Encode the JWE to its compact serialization format
+    /// - Returns: Data containing the encoded JWE
+    public func encoded() -> Data {
         backing.encoded()
     }
 }
@@ -251,7 +257,9 @@ extension JWE {
 extension JWE.Backing {
     private static let dot = Data([0x2E]) // "."
 
-    func encoded() -> Data {
+    /// Encode the JWE backing data to compact serialization format
+    /// - Returns: Data containing the encoded JWE components
+    public func encoded() -> Data {
         let encodedHeader = header.encodeBase64UrlSafe() ?? Data()
         let encodedWrappedKey = wrappedKey.encodeBase64UrlSafe() ?? Data()
         let encodedIV = iv.encodeBase64UrlSafe() ?? Data()

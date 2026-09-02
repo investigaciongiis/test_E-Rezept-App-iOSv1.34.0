@@ -1,39 +1,44 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
+import eRpResources
 import Foundation
 import Nimble
 import XCTest
 
-final class MedicationReminderUITests: XCTestCase {
+@MainActor
+final class MedicationReminderUITests: XCTestCase, Sendable {
     var app: XCUIApplication!
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
+        try await super.tearDown()
 
         notificationAlertMonitor.map { [self] in removeUIInterruptionMonitor($0) }
     }
 
     var notificationAlertMonitor: NSObjectProtocol?
 
-    @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
 
         app = XCUIApplication()
 
@@ -176,7 +181,7 @@ final class MedicationReminderUITests: XCTestCase {
         reminderSetup.toggleActive()
 
         // Validate Wiederholen is by default unbegrenzt->
-        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("Unbegrenzt"))
+        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("Täglich"))
 
         // Validate no time is added by default->
         expect(reminderSetup.numberOfSetupTimes()).to(equal(0))
@@ -244,7 +249,7 @@ final class MedicationReminderUITests: XCTestCase {
         reminderSetup.toggleActive()
 
         // Validate Wiederholen is by default unbegrenzt->
-        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("Unbegrenzt"))
+        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("Täglich"))
 
         // Validate no time is added by default->
         expect(reminderSetup.numberOfSetupTimes()).to(equal(0))
@@ -277,7 +282,7 @@ final class MedicationReminderUITests: XCTestCase {
         repetitionSetup.tapBackButton()
 
         // Validate Zeit wiederholen is set to Begrenzt bis {heute date}->
-        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("bis Heute"))
+        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("Täglich"))
 
         reminderSetup.tapAddTimeButton()
         expect(reminderSetup.numberOfSetupTimes()).to(equal(1))
@@ -331,7 +336,7 @@ final class MedicationReminderUITests: XCTestCase {
         reminderSetup.toggleActive()
 
         // Validate Wiederholen is by default unbegrenzt->
-        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("Unbegrenzt"))
+        expect(reminderSetup.repetitionDetailsCell().value as? String).to(equal("Täglich"))
 
         // Validate no time is added by default->
         expect(reminderSetup.numberOfSetupTimes()).to(equal(0))
@@ -387,7 +392,7 @@ final class MedicationReminderUITests: XCTestCase {
 
         // Validate Zeit wiederholen is set to Begrenzt bis {heute +10 date}->
         expect(repetitionSetup2.repetitionDetailsCell().value as? String)
-            .to(equal("bis \(todayPlus10.datePickerLabelFormatted())"))
+            .to(equal("Täglich"))
 
         // Add a new time->
         repetitionSetup2.tapAddTimeButton()

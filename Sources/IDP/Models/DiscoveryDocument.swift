@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Foundation
@@ -43,12 +47,12 @@ Equatable {
 public struct DiscoveryDocument: Codable {
     let createdOn: Date
 
-    let backing: JWT
+    public let backing: JWT
     let payload: DiscoveryDocumentPayload
     /// The IDP X.509 certificate used to validate the discovery document
     public let discKey: X509
     /// The IDP Authentication endpoint public key, used to derivce the encryption key to encrypt the JWE‘s
-    let encryptionPublicKey: BrainpoolP256r1.KeyExchange.PublicKey
+    public let encryptionPublicKey: BrainpoolP256r1.KeyExchange.PublicKey
     /// The IDP X.509 certificate that is used to check signatures
     public let signingCert: X509
 
@@ -81,7 +85,7 @@ public struct DiscoveryDocument: Codable {
         try container.encode(createdOn, forKey: .createdOn)
     }
 
-    internal init(jwt: JWT, encryptPuks: JWK, signingPuks: JWK, createdOn: Date = Date()) throws {
+    public init(jwt: JWT, encryptPuks: JWK, signingPuks: JWK, createdOn: Date = Date()) throws {
         backing = jwt
         /// Get from every set the first key we encounter and use/set it accordingly
         guard let signingX5C = signingPuks.x5c?.first else {
@@ -192,23 +196,12 @@ extension DiscoveryDocument {
 
 extension DiscoveryDocument {
     // [REQ:gemSpec_IDP_Frontend:A_20512#2|5] Validation by expiration date checking + maximum of 24h window
-    func isValid(on date: Date) -> Bool {
+    /// Check if the discovery document is valid on the given date
+    /// - Parameter date: Date to check validity against
+    /// - Returns: Boolean indicating if the document is valid
+    public func isValid(on date: Date) -> Bool {
         date <= expiresOn &&
             date >= createdOn &&
             date <= createdOn.addingTimeInterval(60 * 60 * 24)
-    }
-}
-
-extension URL {
-    func domainReplacingOccurrences(of find: String, with replace: String) -> URL {
-        // swiftlint:disable force_unwrapping
-        var components = URLComponents(url: self, resolvingAgainstBaseURL: true)!
-        components.host = components.host!.replacingOccurrences(of: find, with: replace)
-        return components.url!
-        // swiftlint:enable force_unwrapping
-    }
-
-    func correct() -> URL {
-        domainReplacingOccurrences(of: ".zentral.idp.splitdns.ti-dienste.de", with: ".app.ti-dienste.de")
     }
 }

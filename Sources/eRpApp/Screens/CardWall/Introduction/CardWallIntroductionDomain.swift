@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -56,6 +60,7 @@ struct CardWallIntroductionDomain {
         let isNFCReady: Bool
         let profileId: UUID
         var entry: KKAppDirectory.Entry?
+        var insuranceType: Profile.InsuranceType = .unknown
         var loading = false
         @Presents var destination: Destination.State?
     }
@@ -137,6 +142,14 @@ struct CardWallIntroductionDomain {
             )
         case let .response(.profileReceived(.success(profile))):
             state.entry = profile?.gIdEntry
+            state.insuranceType = profile?.insuranceType ?? .unknown
+
+            // skip to selection for initial pkv
+            if state.insuranceType == .pKV, state.entry == nil {
+                state.destination = .extAuth(CardWallExtAuthSelectionDomain.State(
+                    insuranceType: state.insuranceType
+                ))
+            }
             return .none
         case .response(.profileReceived(.failure)):
             return .none
@@ -166,7 +179,9 @@ struct CardWallIntroductionDomain {
         case .destination(.presented(.can(.delegate(.navigateToIntro)))),
              // [REQ:BSI-eRp-ePA:O.Auth_4#3] Present the gID flow for selecting the correct insurance company
              .extAuthTapped:
-            state.destination = .extAuth(CardWallExtAuthSelectionDomain.State())
+            state.destination = .extAuth(CardWallExtAuthSelectionDomain.State(
+                insuranceType: state.insuranceType
+            ))
             return .none
         case .directExtAuthTapped:
             guard let selectedKK = state.entry else { return .none }
@@ -256,7 +271,9 @@ struct CardWallIntroductionDomain {
             resourceHandler.open(url, options: [:]) { _ in }
             return .none
         case .destination(.presented(.alert(.searchKK))):
-            state.destination = .extAuth(CardWallExtAuthSelectionDomain.State())
+            state.destination = .extAuth(CardWallExtAuthSelectionDomain.State(
+                insuranceType: state.insuranceType
+            ))
             return .none
         case .destination(.presented(.can(.delegate(.close)))),
              .destination(.presented(.extAuth(.delegate(.close)))):

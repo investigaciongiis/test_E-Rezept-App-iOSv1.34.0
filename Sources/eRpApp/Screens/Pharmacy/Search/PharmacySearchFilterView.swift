@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import ComposableArchitecture
@@ -21,31 +25,29 @@ import eRpStyleKit
 import SwiftUI
 
 struct PharmacySearchFilterView: View {
-    @Perception.Bindable var store: StoreOf<PharmacySearchFilterDomain>
+    @Bindable var store: StoreOf<PharmacySearchFilterDomain>
 
     var body: some View {
-        WithPerceptionTracking {
-            VStack(spacing: 24) {
-                Text(L10n.psfTxtTitle)
-                    .font(.subheadline.weight(.bold))
+        VStack(spacing: 24) {
+            Text(L10n.psfTxtTitle)
+                .font(.subheadline.weight(.bold))
 
-                VStack(alignment: .leading, spacing: 8) {
-                    FilterRow(store: store)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Button(action: {
-                    store.send(.delegate(.close), animation: .easeInOut)
-                }, label: {
-                    Text(L10n.psfBtnAccept)
-                })
-                    .frame(idealWidth: 120, alignment: .center)
-                    .buttonStyle(.secondaryAlt)
+            VStack(alignment: .leading, spacing: 8) {
+                FilterRow(store: store)
             }
-            .padding()
-            .background(Colors.systemBackground.ignoresSafeArea(.all, edges: .bottom))
-            .navigationBarTitleDisplayMode(.inline)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(action: {
+                store.send(.delegate(.close), animation: .easeInOut)
+            }, label: {
+                Text(L10n.psfBtnAccept)
+            })
+                .frame(idealWidth: 120, alignment: .center)
+                .buttonStyle(.secondaryAlt)
         }
+        .padding()
+        .background(Colors.systemBackground.ignoresSafeArea(.all, edges: .bottom))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     struct FilterView: View {
@@ -66,38 +68,32 @@ struct PharmacySearchFilterView: View {
     }
 
     struct FilterRow: View {
-        @Perception.Bindable var store: StoreOf<PharmacySearchFilterDomain>
+        @Bindable var store: StoreOf<PharmacySearchFilterDomain>
 
         var body: some View {
-            WithPerceptionTracking {
-                HStack {
-                    ForEach(store.pharmacyFilterShow[0 ..< 2], id: \.self) { filterOption in
-                        WithPerceptionTracking {
-                            let isEnabled = store.pharmacyFilterOptions.contains(filterOption)
-                            FilterView(
-                                title: filterOption.localizedStringKey,
-                                isEnabled: Binding { isEnabled }
-                                set: { _ in
-                                    store.send(.toggleFilter(filterOption))
-                                }
-                            )
+            HStack {
+                ForEach(store.pharmacyFilterShow[0 ..< 2], id: \.self) { filterOption in
+                    let isEnabled = store.pharmacyFilterOptions.contains(filterOption)
+                    FilterView(
+                        title: filterOption.localizedStringKey,
+                        isEnabled: Binding { isEnabled }
+                        set: { _ in
+                            store.send(.toggleFilter(filterOption))
                         }
-                    }
+                    )
                 }
-                HStack {
-                    ForEach(store.pharmacyFilterShow[2 ..< store.pharmacyFilterShow.count],
-                            id: \.self) { filterOption in
-                        WithPerceptionTracking {
-                            let isEnabled = store.pharmacyFilterOptions.contains(filterOption)
-                            FilterView(
-                                title: filterOption.localizedStringKey,
-                                isEnabled: Binding { isEnabled }
-                                set: { _ in
-                                    store.send(.toggleFilter(filterOption))
-                                }
-                            )
+            }
+            HStack {
+                ForEach(store.pharmacyFilterShow[2 ..< store.pharmacyFilterShow.count],
+                        id: \.self) { filterOption in
+                    let isEnabled = store.pharmacyFilterOptions.contains(filterOption)
+                    FilterView(
+                        title: filterOption.localizedStringKey,
+                        isEnabled: Binding { isEnabled }
+                        set: { _ in
+                            store.send(.toggleFilter(filterOption))
                         }
-                    }
+                    )
                 }
             }
         }
@@ -112,7 +108,7 @@ struct PharmacySearchFilterView: View {
                 Text(filter.localizedStringKey, bundle: .module)
                 Spacer()
                 Image(systemName: isActive ? SFSymbolName.checkmarkCircleFill : SFSymbolName.circle)
-                    .foregroundColor(isActive ? Colors.primary600 : Colors.systemGray)
+                    .foregroundColor(isActive ? Colors.primary700 : Colors.systemGray)
             }.padding([.top, .bottom], 8)
         }
     }

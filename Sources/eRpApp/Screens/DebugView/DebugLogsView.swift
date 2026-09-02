@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -25,7 +29,7 @@ import SwiftUI
 
 #if ENABLE_DEBUG_VIEW
 struct DebugLogsView: View {
-    @Perception.Bindable var store: StoreOf<DebugLogsDomain>
+    @Bindable var store: StoreOf<DebugLogsDomain>
     @State var showShareSheet = false
 
     func background(for log: DebugLiveLogger.RequestLog) -> Color {
@@ -47,54 +51,50 @@ struct DebugLogsView: View {
     }
 
     var body: some View {
-        WithPerceptionTracking {
-            List {
-                Section(header: Text("Sort/Filter")) {
-                    Toggle("Logging enabled", isOn: $store.isLoggingEnabled)
+        List {
+            Section(header: Text("Sort/Filter")) {
+                Toggle("Logging enabled", isOn: $store.isLoggingEnabled)
 
-                    if !store.logs.isEmpty {
-                        HStack {
-                            Text("Reset Log Messages")
-                            Spacer()
-                            Button("Reset") {
-                                store.send(.resetLogMessages, animation: .easeInOut)
-                            }
-                        }
-                    }
-
-                    TextField("Filter Domain", text: $store.filter)
-                    Picker("Sortierung", selection: $store.sort) {
-                        ForEach(DebugLogsDomain.State.Sort.allCases, id: \.id) { sortMethod in
-                            Text(sortMethod.rawValue).tag(sortMethod)
-                        }
-                    }.pickerStyle(SegmentedPickerStyle())
-                }
-                Section(header: Text("Logs")) {
-                    ForEach(store.logs) { log in
-                        WithPerceptionTracking {
-                            Button {
-                                store.send(.showSingleLog(log))
-                            } label: {
-                                LogHeader(log: log)
-                            }
-                            .listRowBackground(self.background(for: log))
+                if !store.logs.isEmpty {
+                    HStack {
+                        Text("Reset Log Messages")
+                        Spacer()
+                        Button("Reset") {
+                            store.send(.resetLogMessages, animation: .easeInOut)
                         }
                     }
                 }
+
+                TextField("Filter Domain", text: $store.filter)
+                Picker("Sortierung", selection: $store.sort) {
+                    ForEach(DebugLogsDomain.State.Sort.allCases, id: \.id) { sortMethod in
+                        Text(sortMethod.rawValue).tag(sortMethod)
+                    }
+                }.pickerStyle(SegmentedPickerStyle())
             }
-            .navigationDestination(
-                item: $store.scope(state: \.destination?.logDetail, action: \.destination.logDetail)
-            ) { store in
-                DebugLogView(store: store)
+            Section(header: Text("Logs")) {
+                ForEach(store.logs) { log in
+                    Button {
+                        store.send(.showSingleLog(log))
+                    } label: {
+                        LogHeader(log: log)
+                    }
+                    .listRowBackground(self.background(for: log))
+                }
             }
-            .sheet(item: $store
-                .scope(state: \.destination?.share,
-                       action: \.destination.share)) { store in
-                    ShareViewController(store: store)
-            }
-            .onAppear {
-                store.send(.loadLogs)
-            }
+        }
+        .navigationDestination(
+            item: $store.scope(state: \.destination?.logDetail, action: \.destination.logDetail)
+        ) { store in
+            DebugLogView(store: store)
+        }
+        .sheet(item: $store
+            .scope(state: \.destination?.share,
+                   action: \.destination.share)) { store in
+                ShareViewController(store: store)
+        }
+        .onAppear {
+            store.send(.loadLogs)
         }
         .navigationTitle("Logs")
         .toolbar {

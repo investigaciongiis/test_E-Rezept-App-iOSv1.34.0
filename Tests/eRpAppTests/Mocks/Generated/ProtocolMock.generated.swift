@@ -43,20 +43,24 @@ final class MockAVSSession: AVSSession {
     
    // MARK: - redeem
 
+    var redeemMessageEndpointRecipientsThrowableError: Error?
     var redeemMessageEndpointRecipientsCallsCount = 0
     var redeemMessageEndpointRecipientsCalled: Bool {
         redeemMessageEndpointRecipientsCallsCount > 0
     }
     var redeemMessageEndpointRecipientsReceivedArguments: (message: AVSMessage, endpoint: AVSEndpoint, recipients: [X509])?
     var redeemMessageEndpointRecipientsReceivedInvocations: [(message: AVSMessage, endpoint: AVSEndpoint, recipients: [X509])] = []
-    var redeemMessageEndpointRecipientsReturnValue: AnyPublisher<AVSSessionResponse, AVSError>!
-    var redeemMessageEndpointRecipientsClosure: ((AVSMessage, AVSEndpoint, [X509]) -> AnyPublisher<AVSSessionResponse, AVSError>)?
+    var redeemMessageEndpointRecipientsReturnValue: AVSSessionResponse!
+    var redeemMessageEndpointRecipientsClosure: ((AVSMessage, AVSEndpoint, [X509]) throws -> AVSSessionResponse)?
 
-    func redeem(message: AVSMessage, endpoint: AVSEndpoint, recipients: [X509]) -> AnyPublisher<AVSSessionResponse, AVSError> {
+    func redeem(message: AVSMessage, endpoint: AVSEndpoint, recipients: [X509]) throws -> AVSSessionResponse {
+        if let error = redeemMessageEndpointRecipientsThrowableError {
+            throw error
+        }
         redeemMessageEndpointRecipientsCallsCount += 1
         redeemMessageEndpointRecipientsReceivedArguments = (message: message, endpoint: endpoint, recipients: recipients)
         redeemMessageEndpointRecipientsReceivedInvocations.append((message: message, endpoint: endpoint, recipients: recipients))
-        return redeemMessageEndpointRecipientsClosure.map({ $0(message, endpoint, recipients) }) ?? redeemMessageEndpointRecipientsReturnValue
+        return try redeemMessageEndpointRecipientsClosure.map({ try $0(message, endpoint, recipients) }) ?? redeemMessageEndpointRecipientsReturnValue
     }
 }
 
@@ -203,6 +207,58 @@ final class MockAppSecurityManager: AppSecurityManager {
         matchesPasswordReceivedPassword = password
         matchesPasswordReceivedInvocations.append(password)
         return try matchesPasswordClosure.map({ try $0(password) }) ?? matchesPasswordReturnValue
+    }
+    
+   // MARK: - registerFailedPasswordAttempt
+
+    var registerFailedPasswordAttemptThrowableError: Error?
+    var registerFailedPasswordAttemptCallsCount = 0
+    var registerFailedPasswordAttemptCalled: Bool {
+        registerFailedPasswordAttemptCallsCount > 0
+    }
+    var registerFailedPasswordAttemptClosure: (() throws -> Void)?
+
+    func registerFailedPasswordAttempt() throws {
+        if let error = registerFailedPasswordAttemptThrowableError {
+            throw error
+        }
+        registerFailedPasswordAttemptCallsCount += 1
+        try registerFailedPasswordAttemptClosure?()
+    }
+    
+   // MARK: - resetPasswordDelay
+
+    var resetPasswordDelayThrowableError: Error?
+    var resetPasswordDelayCallsCount = 0
+    var resetPasswordDelayCalled: Bool {
+        resetPasswordDelayCallsCount > 0
+    }
+    var resetPasswordDelayClosure: (() throws -> Void)?
+
+    func resetPasswordDelay() throws {
+        if let error = resetPasswordDelayThrowableError {
+            throw error
+        }
+        resetPasswordDelayCallsCount += 1
+        try resetPasswordDelayClosure?()
+    }
+    
+   // MARK: - currentPasswordDelay
+
+    var currentPasswordDelayThrowableError: Error?
+    var currentPasswordDelayCallsCount = 0
+    var currentPasswordDelayCalled: Bool {
+        currentPasswordDelayCallsCount > 0
+    }
+    var currentPasswordDelayReturnValue: TimeInterval!
+    var currentPasswordDelayClosure: (() throws -> TimeInterval)?
+
+    func currentPasswordDelay() throws -> TimeInterval {
+        if let error = currentPasswordDelayThrowableError {
+            throw error
+        }
+        currentPasswordDelayCallsCount += 1
+        return try currentPasswordDelayClosure.map({ try $0() }) ?? currentPasswordDelayReturnValue
     }
     
    // MARK: - migrate
@@ -759,30 +815,6 @@ final class MockInternalCommunicationProtocol: InternalCommunicationProtocol {
     func loadUnreadInternalCommunicationsCount() -> AsyncThrowingStream<Int, Swift.Error> {
         loadUnreadInternalCommunicationsCountCallsCount += 1
         return loadUnreadInternalCommunicationsCountClosure.map({ $0() }) ?? loadUnreadInternalCommunicationsCountReturnValue
-    }
-}
-
-
-// MARK: - MockJWTSigner -
-
-final class MockJWTSigner: JWTSigner {
-    
-   // MARK: - sign
-
-    var signMessageCallsCount = 0
-    var signMessageCalled: Bool {
-        signMessageCallsCount > 0
-    }
-    var signMessageReceivedMessage: Data?
-    var signMessageReceivedInvocations: [Data] = []
-    var signMessageReturnValue: AnyPublisher<Data, Swift.Error>!
-    var signMessageClosure: ((Data) -> AnyPublisher<Data, Swift.Error>)?
-
-    func sign(message: Data) -> AnyPublisher<Data, Swift.Error> {
-        signMessageCallsCount += 1
-        signMessageReceivedMessage = message
-        signMessageReceivedInvocations.append(message)
-        return signMessageClosure.map({ $0(message) }) ?? signMessageReturnValue
     }
 }
 
@@ -1365,6 +1397,38 @@ final class MockPharmacyRepository: PharmacyRepository {
         loadAvsCertificatesForReceivedInvocations.append(id)
         return loadAvsCertificatesForClosure.map({ $0(id) }) ?? loadAvsCertificatesForReturnValue
     }
+    
+   // MARK: - fetchInsurance
+
+    var fetchInsuranceIkNumberCallsCount = 0
+    var fetchInsuranceIkNumberCalled: Bool {
+        fetchInsuranceIkNumberCallsCount > 0
+    }
+    var fetchInsuranceIkNumberReceivedIkNumber: String?
+    var fetchInsuranceIkNumberReceivedInvocations: [String] = []
+    var fetchInsuranceIkNumberReturnValue: AnyPublisher<Insurance?, PharmacyRepositoryError>!
+    var fetchInsuranceIkNumberClosure: ((String) -> AnyPublisher<Insurance?, PharmacyRepositoryError>)?
+
+    func fetchInsurance(ikNumber: String) -> AnyPublisher<Insurance?, PharmacyRepositoryError> {
+        fetchInsuranceIkNumberCallsCount += 1
+        fetchInsuranceIkNumberReceivedIkNumber = ikNumber
+        fetchInsuranceIkNumberReceivedInvocations.append(ikNumber)
+        return fetchInsuranceIkNumberClosure.map({ $0(ikNumber) }) ?? fetchInsuranceIkNumberReturnValue
+    }
+    
+   // MARK: - fetchAllInsurances
+
+    var fetchAllInsurancesCallsCount = 0
+    var fetchAllInsurancesCalled: Bool {
+        fetchAllInsurancesCallsCount > 0
+    }
+    var fetchAllInsurancesReturnValue: AnyPublisher<[Insurance], PharmacyRepositoryError>!
+    var fetchAllInsurancesClosure: (() -> AnyPublisher<[Insurance], PharmacyRepositoryError>)?
+
+    func fetchAllInsurances() -> AnyPublisher<[Insurance], PharmacyRepositoryError> {
+        fetchAllInsurancesCallsCount += 1
+        return fetchAllInsurancesClosure.map({ $0() }) ?? fetchAllInsurancesReturnValue
+    }
 }
 
 
@@ -1717,6 +1781,24 @@ final class MockRedeemService: RedeemService {
         redeemReceivedInvocations.append(orders)
         return redeemClosure.map({ $0(orders) }) ?? redeemReturnValue
     }
+    
+   // MARK: - redeemDiGa
+
+    var redeemDiGaCallsCount = 0
+    var redeemDiGaCalled: Bool {
+        redeemDiGaCallsCount > 0
+    }
+    var redeemDiGaReceivedOrders: [OrderDiGaRequest]?
+    var redeemDiGaReceivedInvocations: [[OrderDiGaRequest]] = []
+    var redeemDiGaReturnValue: AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError>!
+    var redeemDiGaClosure: (([OrderDiGaRequest]) -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError>)?
+
+    func redeemDiGa(_ orders: [OrderDiGaRequest]) -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError> {
+        redeemDiGaCallsCount += 1
+        redeemDiGaReceivedOrders = orders
+        redeemDiGaReceivedInvocations.append(orders)
+        return redeemDiGaClosure.map({ $0(orders) }) ?? redeemDiGaReturnValue
+    }
 }
 
 
@@ -1817,43 +1899,6 @@ final class MockRouting: Routing {
         routeToReceivedEndpoint = endpoint
         routeToReceivedInvocations.append(endpoint)
         routeToClosure?(endpoint)
-    }
-}
-
-
-// MARK: - MockSearchHistory -
-
-final class MockSearchHistory: SearchHistory {
-    
-   // MARK: - addHistoryItem
-
-    var addHistoryItemCallsCount = 0
-    var addHistoryItemCalled: Bool {
-        addHistoryItemCallsCount > 0
-    }
-    var addHistoryItemReceivedItem: String?
-    var addHistoryItemReceivedInvocations: [String] = []
-    var addHistoryItemClosure: ((String) -> Void)?
-
-    func addHistoryItem(_ item: String) {
-        addHistoryItemCallsCount += 1
-        addHistoryItemReceivedItem = item
-        addHistoryItemReceivedInvocations.append(item)
-        addHistoryItemClosure?(item)
-    }
-    
-   // MARK: - historyItems
-
-    var historyItemsCallsCount = 0
-    var historyItemsCalled: Bool {
-        historyItemsCallsCount > 0
-    }
-    var historyItemsReturnValue: [String]!
-    var historyItemsClosure: (() -> [String])?
-
-    func historyItems() -> [String] {
-        historyItemsCallsCount += 1
-        return historyItemsClosure.map({ $0() }) ?? historyItemsReturnValue
     }
 }
 
@@ -2411,14 +2456,6 @@ final class MockUserDataStore: UserDataStore {
         set(value) { underlyingAppStartCounter = value }
     }
     var underlyingAppStartCounter: Int!
-    
-   // MARK: - hideWelcomeDrawer
-
-    var hideWelcomeDrawer: Bool {
-        get { underlyingHideWelcomeDrawer }
-        set(value) { underlyingHideWelcomeDrawer = value }
-    }
-    var underlyingHideWelcomeDrawer: Bool!
     
    // MARK: - readInternalCommunications
 

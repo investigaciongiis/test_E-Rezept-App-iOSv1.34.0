@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import SwiftUI
@@ -21,6 +25,8 @@ import SwiftUI
 /// `ButtonStyle` for navigation buttons with a chevron. This style must be applied manually to `Button`s that should be
 /// presented as navigational buttons. This style is not meant to be used with `NavigationLink`and will probably not
 /// work with these.
+///
+/// - Warning: Attention: This style only works within **`SectionContainer`s**
 public struct DetailNavigationButtonStyle: ButtonStyle {
     let showSeparator: Bool
     let minChevronSpacing: CGFloat
@@ -52,7 +58,7 @@ public struct DetailNavigationButtonStyle: ButtonStyle {
     }
 }
 
-public struct DetailNavigationLabelStyle: LabelStyle {
+struct DetailNavigationLabelStyle: LabelStyle {
     let showSeparator: Bool
     let minChevronSpacing: CGFloat
 
@@ -61,7 +67,7 @@ public struct DetailNavigationLabelStyle: LabelStyle {
         self.minChevronSpacing = minChevronSpacing
     }
 
-    public func makeBody(configuration: Configuration) -> some View {
+    func makeBody(configuration: Configuration) -> some View {
         Label(title: {
             HStack(spacing: 0) {
                 configuration.title
@@ -138,12 +144,16 @@ extension ButtonStyle where Self == DetailNavigationButtonStyle {
     ///
     /// To apply this style to a button, or to a view that contains buttons, use
     /// the ``View/buttonStyle(_:)`` modifier.
+    ///
+    /// - Warning: Attention: This style only works within **`SectionContainer`s**
     public static var navigation: DetailNavigationButtonStyle { DetailNavigationButtonStyle(showSeparator: true) }
 
     /// A button style that applies a navigation chevron and optionally skips the divider.
     ///
     /// To apply this style to a button, or to a view that contains buttons, use
     /// the ``View/buttonStyle(.navigation(showSeparator:))`` modifier.
+    ///
+    /// - Warning: Attention: This style only works within **`SectionContainer`s**
     public static func navigation(showSeparator: Bool = true,
                                   minChevronSpacing: CGFloat? = nil) -> DetailNavigationButtonStyle {
         DetailNavigationButtonStyle(showSeparator: showSeparator, minChevronSpacing: minChevronSpacing)

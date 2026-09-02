@@ -22,6 +22,16 @@ import eRpStyleKit
 
 
 
+extension AnnotationBadge {
+    init(text: StringAsset, bundle: Bundle? = nil) {
+    self.init(text: text.key, bundle: bundle)
+    }
+}
+extension AnnotationBadgeModifier {
+    init(text: StringAsset, bundle: Bundle? = nil) {
+    self.init(text: text.key, bundle: bundle)
+    }
+}
 extension DefaultTextButton {
     init(text: StringAsset, a11y: String, style: Style = .primary, action: @escaping () -> Void) {
         self.init(text: text.key, a11y: a11y, style: style, action: action)
@@ -85,9 +95,9 @@ extension MedicationRedeemView {
         self.init(text: text.key, a11y: a11y, isEnabled: isEnabled, action: action)
     }
 }
-extension OnboardingRegisterAuthenticationView.BiometryButton {
-    init(text: StringAsset, image: Image, backgroundColor: Color, action: @escaping () -> Void) {
-        self.init(text: text.key, image: image, backgroundColor: backgroundColor, action: action)
+extension NavButton {
+    init(text: StringAsset, a11y: String, back: Bool, action: @escaping () -> Void) {
+        self.init(text: text.key, a11y: a11y, back: back, action: action)
     }
 }
 extension OptInCell {
@@ -96,8 +106,8 @@ extension OptInCell {
     }
 }
 extension PrimaryTextButton {
-    init(text: StringAsset, a11y: String, image: Image? = nil, isEnabled: Bool = true, action: @escaping () -> Void) {
-        self.init(text: text.key, a11y: a11y, image: image, isEnabled: isEnabled, action: action)
+    init(text: StringAsset, a11y: String, image: Image? = nil, isEnabled: Bool = true, useFullWidth: Bool = true, action: @escaping () -> Void) {
+        self.init(text: text.key, a11y: a11y, image: image, isEnabled: isEnabled, useFullWidth: useFullWidth, action: action)
     }
 }
 extension PrimaryTextButtonBorder {
@@ -155,8 +165,8 @@ extension SubTitleTop {
     }
 }
 extension TertiaryListButton {
-    init(text: StringAsset, imageName: String? = SFSymbolName.refresh, accessibilityIdentifier: String, action: @escaping () -> Void) {
-        self.init(text: text.key, imageName: imageName, accessibilityIdentifier: accessibilityIdentifier, action: action)
+    init(text: StringAsset, semiBold: Bool = false, imageName: String? = SFSymbolName.refresh, accessibilityIdentifier: String, action: @escaping () -> Void) {
+        self.init(text: text.key, semiBold: semiBold, imageName: imageName, accessibilityIdentifier: accessibilityIdentifier, action: action)
     }
 }
 extension Tile {

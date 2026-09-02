@@ -1,25 +1,29 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import eRpKit
 import Foundation
 import ModelsR4
-
+// swiftlint:disable file_length
 // sourcery: CodedError = "580"
 public enum RemoteStorageBundleParsingError: Swift.Error {
     // sourcery: errorCode = "01"
@@ -44,15 +48,19 @@ extension ModelsR4.Bundle {
                 throw RemoteStorageBundleParsingError.parseError("Could not parse id from task.")
             }
 
+            let flowType = task.flowTypeCode.map { ErxTask.FlowType(rawValue: $0) } ?? ErxTask
+                .FlowType(taskId: identifier)
+
             guard let status = task.status.value?.rawValue,
-                  let erxTaskStatus = ErxTask.Status(rawValue: status) else {
-                return ErxTask(identifier: identifier, status: .error(.missingStatus))
+                  let erxTaskStatus = ErxTask.Status(rawValue: status)
+            else {
+                return ErxTask(identifier: identifier, status: .error(.missingStatus), flowType: flowType)
             }
 
             return ErxTask(
                 identifier: identifier,
                 status: erxTaskStatus,
-                flowType: ErxTask.FlowType(rawValue: task.flowTypeCode),
+                flowType: flowType,
                 accessCode: task.accessCode,
                 fullUrl: $0.fullUrl?.value?.url.absoluteString,
                 authoredOn: task.authoredOn?.value?.description,
@@ -79,14 +87,22 @@ extension ModelsR4.Bundle {
         else {
             return nil
         }
-
         let fullUrl = entry.fullUrl
         let bundle = self
         let taskAccessCode = task.accessCode
+        let flowType: ErxTask.FlowType = task.flowTypeCode.map {
+            ErxTask.FlowType(rawValue: $0)
+        } ?? ErxTask.FlowType(taskId: taskId)
 
         guard let status = task.status.value?.rawValue,
-              let erxTaskStatus = ErxTask.Status(rawValue: status) else {
-            return ErxTask(identifier: taskId, status: .error(.missingStatus), accessCode: taskAccessCode)
+              let erxTaskStatus = ErxTask.Status(rawValue: status)
+        else {
+            return ErxTask(
+                identifier: taskId,
+                status: .error(.missingStatus),
+                flowType: flowType,
+                accessCode: taskAccessCode
+            )
         }
 
         // Find the patientReceipt document reference
@@ -94,7 +110,7 @@ extension ModelsR4.Bundle {
             return ErxTask(
                 identifier: taskId,
                 status: .error(.missingPatientReceiptReference),
-                flowType: ErxTask.FlowType(rawValue: task.flowTypeCode),
+                flowType: flowType,
                 accessCode: taskAccessCode,
                 fullUrl: fullUrl?.value?.url.absoluteString,
                 authoredOn: task.authoredOn?.value?.description,
@@ -102,14 +118,16 @@ extension ModelsR4.Bundle {
                 expiresOn: task.expiryDate,
                 acceptedUntil: task.acceptDate,
                 lastMedicationDispense: task.lastMedicationDispense,
-                prescriptionId: task.prescriptionId
+                prescriptionId: task.prescriptionId,
+                isEURedeemable: task.isEURedeemable,
+                isSetEURedeemableByPatient: task.isSetEURedeemableByPatient
             )
         }
         guard let patientReceiptIdentifier = patientReceiptReference.value.identifierValue else {
             return ErxTask(
                 identifier: taskId,
                 status: .error(.missingPatientReceiptIdentifier),
-                flowType: ErxTask.FlowType(rawValue: task.flowTypeCode),
+                flowType: flowType,
                 accessCode: taskAccessCode,
                 fullUrl: fullUrl?.value?.url.absoluteString,
                 authoredOn: task.authoredOn?.value?.description,
@@ -117,7 +135,9 @@ extension ModelsR4.Bundle {
                 expiresOn: task.expiryDate,
                 acceptedUntil: task.acceptDate,
                 lastMedicationDispense: task.lastMedicationDispense,
-                prescriptionId: task.prescriptionId
+                prescriptionId: task.prescriptionId,
+                isEURedeemable: task.isEURedeemable,
+                isSetEURedeemableByPatient: task.isSetEURedeemableByPatient
             )
         }
         // Find the Document Bundle (KBV-Bundle)
@@ -126,7 +146,7 @@ extension ModelsR4.Bundle {
             return ErxTask(
                 identifier: taskId,
                 status: .error(.missingPatientReceiptBundle),
-                flowType: ErxTask.FlowType(rawValue: task.flowTypeCode),
+                flowType: flowType,
                 accessCode: taskAccessCode,
                 fullUrl: fullUrl?.value?.url.absoluteString,
                 authoredOn: task.authoredOn?.value?.description,
@@ -134,18 +154,21 @@ extension ModelsR4.Bundle {
                 expiresOn: task.expiryDate,
                 acceptedUntil: task.acceptDate,
                 lastMedicationDispense: task.lastMedicationDispense,
-                prescriptionId: task.prescriptionId
+                prescriptionId: task.prescriptionId,
+                isEURedeemable: task.isEURedeemable,
+                isSetEURedeemableByPatient: task.isSetEURedeemableByPatient
             )
         }
 
         let patient = patientReceiptBundle.patient
         let practitioner = patientReceiptBundle.practitioner
         let organization = patientReceiptBundle.organization
+        let deviceRequest = patientReceiptBundle.deviceRequest
 
         return ErxTask(
             identifier: taskId,
             status: erxTaskStatus,
-            flowType: ErxTask.FlowType(rawValue: task.flowTypeCode),
+            flowType: flowType,
             accessCode: taskAccessCode,
             fullUrl: fullUrl?.value?.url.absoluteString,
             authoredOn: task.authoredOn?.value?.description,
@@ -184,7 +207,18 @@ extension ModelsR4.Bundle {
                 phone: organization?.phone,
                 email: organization?.email,
                 address: organization?.completeAddress
-            )
+            ),
+            deviceRequest: ErxDeviceRequest(
+                status: deviceRequest?.deviceRequestStatus,
+                intent: deviceRequest?.deviceRequestIntent,
+                pzn: deviceRequest?.pzn,
+                appName: deviceRequest?.appName,
+                isSER: deviceRequest?.isSer,
+                accidentInfo: deviceRequest?.accidentInfo,
+                authoredOn: deviceRequest?.authoredOn?.value?.description
+            ),
+            isEURedeemable: task.isEURedeemable,
+            isSetEURedeemableByPatient: task.isSetEURedeemableByPatient
         )
     }
 
@@ -257,7 +291,7 @@ extension ModelsR4.Bundle {
             hasEmergencyServiceFee: medicationRequest?.noctuFeeWaiver,
             dispenseValidityEnd: dispenseValidityEnd,
             accidentInfo: medicationRequest?.accidentInfo,
-            bvg: medicationRequest?.bvg,
+            ser: medicationRequest?.ser,
             coPaymentStatus: medicationRequest?.coPaymentStatus,
             multiplePrescription: medicationRequest?.multiplePrescription,
             quantity: medicationRequest?.erxTaskQuantity
@@ -358,6 +392,33 @@ extension ModelsR4.Task {
             return nil
         }
     }
+
+    var isEURedeemable: Bool {
+        `extension`?.first { anExtension in
+            Workflow.Key.euIsRedeemableByProperties.contains { $0.value == anExtension.url.value?.url.absoluteString }
+        }
+        .flatMap {
+            if let valueX = $0.value,
+               case Extension.ValueX.boolean(true) = valueX {
+                return true
+            }
+            return false
+        } ?? false
+    }
+
+    var isSetEURedeemableByPatient: Bool {
+        `extension`?.first { anExtension in
+            Workflow.Key.euIsRedeemableByPatientAuthorization
+                .contains { $0.value == anExtension.url.value?.url.absoluteString }
+        }
+        .flatMap {
+            if let valueX = $0.value,
+               case Extension.ValueX.boolean(true) = valueX {
+                return true
+            }
+            return false
+        } ?? false
+    }
 }
 
 extension ModelsR4.Bundle {
@@ -439,6 +500,13 @@ extension ModelsR4.Bundle {
         }
         .joined(separator: ",")
     }
+
+    // DiGa
+    var deviceRequest: ModelsR4.DeviceRequest? {
+        entry?.lazy.compactMap {
+            $0.resource?.get(if: ModelsR4.DeviceRequest.self)
+        }.first
+    }
 }
 
 extension ModelsR4.Organization {
@@ -486,3 +554,5 @@ extension Sequence where Element == ModelsR4.PractitionerQualification {
         first { $0.code.text != nil }?.code.text?.value?.string
     }
 }
+
+// swiftlint:enable file_length

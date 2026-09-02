@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Foundation
@@ -21,16 +25,22 @@ import Foundation
 public struct SharedTask: Equatable, Codable {
     public let id: String
     public let accessCode: String
+    public let name: String?
 
-    public init(id: String, accessCode: String) {
+    public init(id: String, accessCode: String, name: String? = nil) {
         self.id = id
         self.accessCode = accessCode
+        self.name = name
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
 
-        try container.encode("\(id)|\(accessCode)")
+        if let name = name {
+            try container.encode("\(id)|\(accessCode)|\(name)")
+        } else {
+            try container.encode("\(id)|\(accessCode)")
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -40,7 +50,7 @@ public struct SharedTask: Equatable, Codable {
 
         let split = combined.split(separator: "|")
 
-        guard split.count == 2 else {
+        guard split.count >= 2, split.count <= 3 else {
             if split.isEmpty {
                 throw Error.failedDecodingEmptyString(combined)
             }
@@ -50,7 +60,11 @@ public struct SharedTask: Equatable, Codable {
             throw Error.tooManyComponents(combined)
         }
 
-        self.init(id: String(split[0]), accessCode: String(split[1]))
+        let id = String(split[0])
+        let accessCode = String(split[1])
+        let name = split.count == 3 ? String(split[2]) : nil
+
+        self.init(id: id, accessCode: accessCode, name: name)
     }
 
     // sourcery: CodedError = "207"
@@ -82,6 +96,7 @@ extension Sequence where Element == SharedTask {
             let task = ErxTask(
                 identifier: sharedTask.id,
                 status: status,
+                flowType: ErxTask.FlowType(taskId: sharedTask.id),
                 accessCode: sharedTask.accessCode,
                 authoredOn: authoredOn,
                 author: author,
@@ -100,11 +115,15 @@ extension SharedTask {
     /// Initializes a `SharedTask` with an `ErxTask`.
     /// - Parameter task: The `ErxTaks` that should be converted
     public init(with task: ErxTask) {
-        self.init(id: task.id, accessCode: task.accessCode ?? "")
+        self.init(id: task.id, accessCode: task.accessCode ?? "", name: task.medication?.name)
     }
 
-    /// Creates a string of `ErxTask`'s id and accessCode.
+    /// Creates a string of `ErxTask`'s id, accessCode, and optionally name.
     public var asString: String {
-        "\(id)|\(accessCode)"
+        if let name = name {
+            return "\(id)|\(accessCode)|\(name)"
+        } else {
+            return "\(id)|\(accessCode)"
+        }
     }
 }

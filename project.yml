@@ -6,7 +6,7 @@ options:
   useBaseInternationalization: false
   deploymentTarget:
     macOS: 13.0
-    iOS: 16.0
+    iOS: 17.0
 schemes:
   UITests_iOS:
     build:
@@ -60,11 +60,14 @@ schemes:
         - package: eRpKit/eRpRemoteStorageTests
         - package: eRpKit/PharmacyTests
         - package: eRpKit/IDPTests
+        - package: eRpKit/IDPLiveTests
         - package: eRpKit/HTTPClientTests
+        - package: eRpKit/HTTPClientLiveTests
         - package: eRpKit/FHIRClientTests
         - package: eRpKit/TrustStoreTests
         - package: eRpKit/VAUClientTests
         - package: eRpKit/AVSTests
+        - package: eRpKit/FHIRVZDTests
   AllTests_macOS:
     build:
       targets:
@@ -79,10 +82,14 @@ schemes:
         - package: eRpKit/eRpRemoteStorageTests
         - package: eRpKit/PharmacyTests
         - package: eRpKit/IDPTests
+        - package: eRpKit/IDPLiveTests
         - package: eRpKit/HTTPClientTests
+        - package: eRpKit/HTTPClientLiveTests
         - package: eRpKit/FHIRClientTests
         - package: eRpKit/TrustStoreTests
         - package: eRpKit/VAUClientTests
+        - package: eRpKit/AVSTests
+        - package: eRpKit/FHIRVZDTests
   AllIntegrationTests_iOS:
     build:
       targets:
@@ -138,11 +145,6 @@ targets:
   eRpApp:
     type: application
     platform: iOS
-    preBuildScripts:
-      - script: "mint run swiftgen"
-        name: Swiftgen
-        shell: "/bin/sh -l"
-        # basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ${GEM_PRODUCT_BUNDLE_IDENTIFIER}
@@ -162,6 +164,24 @@ targets:
       region: DE
       testTargets:
         - eRpAppTests
+      gatherCoverageData: false
+  EUPrescriptionPreview:
+    type: application
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ${GEM_PRODUCT_BUNDLE_IDENTIFIER}.Preview.EUPrescription
+        TARGETED_DEVICE_FAMILY: 1
+    sources:
+      - path: App/Previews/EUPrescription
+        excludes:
+          - "Package.swift"
+    dependencies:
+      - package: eRpKit
+        product: FeatureEURedeem
+    scheme:
+      language: de
+      region: DE
       gatherCoverageData: false
   eRpAppTests:
     type: bundle.unit-test
@@ -195,13 +215,12 @@ targets:
       - path: Tests/eRpAppUITests/Support/Info.plist
         buildPhase: none
       - path: Tests/eRpAppUITests/Tests
-      - path: Sources/eRpApp/Generated/Accessibility+Generated.swift
     dependencies:
       - target: eRpApp
-      - package: eRpKit
-        product: eRpFeatures
       - package: Nimble
       - package: SnapshotTesting
+      - package: eRpKit
+        product: eRpFeatures
   eRpAppStoreScreenshots:
     type: bundle.unit-test
     platform: iOS

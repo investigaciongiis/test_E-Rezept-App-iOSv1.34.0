@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import ComposableArchitecture
@@ -51,11 +55,10 @@ final class PharmacyDetailViewSnapshotTests: ERPSnapshotTestCase {
         let sut = PharmacyDetailView(
             store: store(
                 for: .init(
-                    prescriptions: Shared([]),
-                    selectedPrescriptions: Shared([]),
+                    prescriptions: Shared(value: []),
+                    selectedPrescriptions: Shared(value: []),
                     inRedeemProcess: true,
-                    pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyInactive,
-                    pharmacyRedeemState: Shared(nil)
+                    pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyInactive
                 )
             )
         )
@@ -80,39 +83,29 @@ final class PharmacyDetailViewSnapshotTests: ERPSnapshotTestCase {
 extension PharmacyDetailViewSnapshotTests {
     enum Fixtures {
         static let allServiceOptionsState = PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: Prescription.Fixtures.prescriptions),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: true,
             pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyA,
             hasRedeemableTasks: true,
-            pharmacyRedeemState: Shared(nil),
-            reservationService: .erxTaskRepository,
-            shipmentService: .erxTaskRepository,
-            deliveryService: .erxTaskRepository
+            availableServiceOptions: [.delivery, .onPremise, .shipment]
         )
 
         static let inactiveState = PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: true,
             pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyInactive,
             hasRedeemableTasks: false,
-            pharmacyRedeemState: Shared(nil),
-            reservationService: .erxTaskRepository,
-            shipmentService: .erxTaskRepository,
-            deliveryService: .erxTaskRepository
+            availableServiceOptions: [.delivery, .onPremise, .shipment]
         )
 
         static let sheetNoServiceState = PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
             inOrdersMessage: true,
-            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyInactive,
-            pharmacyRedeemState: Shared(nil),
-            reservationService: .noService,
-            shipmentService: .noService,
-            deliveryService: .noService
+            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyInactive
         )
     }
 }

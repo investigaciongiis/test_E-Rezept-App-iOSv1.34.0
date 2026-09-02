@@ -1,31 +1,40 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import AVS
+import BfArM
 import Combine
+import ComposableArchitecture
 import Dependencies
 import eRpKit
 import eRpLocalStorage
 import eRpRemoteStorage
 import FHIRClient
+import FHIRVZD
 import Foundation
 import HTTPClient
+import HTTPClientLive
 import IDP
+import IDPLive
 import Pharmacy
 import TrustStore
 import VAUClient
@@ -127,6 +136,15 @@ class StandardSessionContainer: UserSession {
         )
     }()
 
+    lazy var fhirVZDSession: FHIRVZDSession = {
+        let fhirVZDConfig = FHIRVZDClient.Configuration(
+            eRezeptAPIServer: appConfiguration.eRezept,
+            eRezeptAdditionalHeader: appConfiguration.eRezeptAdditionalHeader
+        )
+
+        return DefaultFHIRVZDSession(config: fhirVZDConfig)
+    }()
+
     lazy var extAuthRequestStorage: ExtAuthRequestStorage = { PersistentExtAuthRequestStorage() }()
     lazy var secureUserStore: SecureUserDataStore = { keychainStorage }()
     lazy var localUserStore: UserDataStore = { UserDefaultsStore() }()
@@ -180,14 +198,14 @@ class StandardSessionContainer: UserSession {
     @Dependency(\.pharmacyServiceFactory) var pharmacyServiceFactory: PharmacyServiceFactory
 
     lazy var pharmacyRepository: PharmacyRepository = {
-        DefaultPharmacyRepository(
+        let fhirClient = FHIRClient(
+            server: appConfiguration.fhirVzd,
+            httpClient: fhirVZDHttpClient
+        )
+
+        return DefaultPharmacyRepository(
             disk: pharmacyCoreDataStore,
-            cloud: pharmacyServiceFactory.construct(
-                FHIRClient(
-                    server: appConfiguration.apoVzd,
-                    httpClient: pharmacyHttpClient
-                )
-            )
+            cloud: pharmacyServiceFactory.construct(fhirClient, fhirVZDSession)
         )
     }()
 
@@ -371,10 +389,10 @@ extension StandardSessionContainer {
         // [REQ:gemSpec_IDP_Frontend:A_21325#2] Interceptor order defines what is encrypted via VAU
         let interceptors: [Interceptor] = [
             AdditionalHeaderInterceptor(additionalHeader: appConfiguration.erpAdditionalHeader),
-            idpSession.httpInterceptor(delegate: nil),
+            IDPInterceptor(session: idpSession, delegate: nil),
             LoggingInterceptor(log: .body), // Logging interceptor (DEBUG ONLY)
             DebugLiveLogger.LogInterceptor(),
-            session.provideInterceptor(),
+            VAUInterceptor(vauSession: session),
             AdditionalHeaderInterceptor(additionalHeader: appConfiguration.erpAdditionalHeader),
         ]
 
@@ -399,9 +417,9 @@ extension StandardSessionContainer {
         )
     }
 
-    var pharmacyHttpClient: HTTPClient {
+    var fhirVZDHttpClient: HTTPClient {
         let interceptors: [Interceptor] = [
-            AdditionalHeaderInterceptor(additionalHeader: appConfiguration.apoVzdAdditionalHeader),
+            AdditionalHeaderInterceptor(additionalHeader: appConfiguration.fhirVzdAdditionalHeader),
             LoggingInterceptor(log: .body), // Logging interceptor (DEBUG ONLY)
             DebugLiveLogger.LogInterceptor(),
         ]

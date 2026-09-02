@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -438,7 +442,7 @@ final class DefaultErxTaskRepositoryTests: XCTestCase {
             profile: profilePublisher
         )
 
-        let task = ErxTask(identifier: "1234-5678-9098", status: .ready)
+        let task = ErxTask(identifier: "1234-5678-9098", status: .ready, flowType: .pharmacyOnly)
 
         // tasks
         mockLocalDataStore.fetchLatestLastModifiedForErxTasksClosure = {
@@ -448,7 +452,9 @@ final class DefaultErxTaskRepositoryTests: XCTestCase {
 
         mockRemoteDataStore.listAllTasksAfterClosure = { _ in
             actualCallOrder.append("listAllTasksRemote")
-            return Just(PagedContent(content: [ErxTask(identifier: task.identifier, status: .cancelled)], next: nil))
+            return Just(PagedContent(
+                content: [ErxTask(identifier: task.identifier, status: .cancelled, flowType: .pharmacyOnly)], next: nil
+            ))
                 .setFailureType(to: RemoteStoreError.self)
                 .eraseToAnyPublisher()
         }
@@ -587,22 +593,24 @@ extension DefaultErxTaskRepositoryTests {
                 manufacturingInstructions: nil,
                 ingredients: []
             ),
-            epaMedication: nil
+            epaMedication: nil,
+            diGaDispense: nil
         )
 
-        static let erxTask1 = ErxTask(identifier: "task1", status: .ready)
-        static let erxTask2 = ErxTask(identifier: "task2", status: .ready)
-        static let erxTask3 = ErxTask(identifier: "task3", status: .ready)
-        static let erxTask4 = ErxTask(identifier: "task4", status: .ready)
-        static let erxTask5 = ErxTask(identifier: "task5", status: .ready)
-        static let erxTask6 = ErxTask(identifier: "task6", status: .ready)
-        static let erxTask7 = ErxTask(identifier: "task7", status: .ready)
-        static let erxTask8 = ErxTask(identifier: "task8", status: .ready)
-        static let erxTask9 = ErxTask(identifier: "task9", status: .ready)
+        static let erxTask1 = ErxTask(identifier: "task1", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask2 = ErxTask(identifier: "task2", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask3 = ErxTask(identifier: "task3", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask4 = ErxTask(identifier: "task4", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask5 = ErxTask(identifier: "task5", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask6 = ErxTask(identifier: "task6", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask7 = ErxTask(identifier: "task7", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask8 = ErxTask(identifier: "task8", status: .ready, flowType: .pharmacyOnly)
+        static let erxTask9 = ErxTask(identifier: "task9", status: .ready, flowType: .pharmacyOnly)
 
         static let scannedTaskWithMedicationSchedule = ErxTask(
             identifier: "scannedTask",
             status: .ready,
+            flowType: .pharmacyOnly,
             source: .scanner,
             medicationSchedule: medicationSchedule
         )
@@ -661,6 +669,7 @@ extension DefaultErxTaskRepositoryTests {
         static let erxTaskWithSchedule = ErxTask(
             identifier: "task1",
             status: .ready,
+            flowType: .pharmacyOnly,
             medicationSchedule: medicationSchedule
         )
 

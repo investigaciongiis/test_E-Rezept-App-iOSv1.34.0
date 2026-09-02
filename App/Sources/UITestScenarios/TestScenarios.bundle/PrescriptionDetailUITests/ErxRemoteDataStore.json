@@ -10,9 +10,10 @@
         "payload":
         {
             "identifier": "FDBB85D0-D818-413F-A91D-71ABB8AF46FD",
-            "pharmacyTelematikId": "3-01.2.2023001.16.204",
+            "telematikId": "3-01.2.2023001.16.204",
             "accessCode": "a0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
             "erxTaskId": "160.000.006.456.334.16",
+            "flowType": "160",
             "payload":
             {
                 "name": "Boaty Mc Boatface",
@@ -114,6 +115,7 @@
                 "content":
                 [
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -124,7 +126,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -137,6 +139,8 @@
                         "authoredOn": "{{DATE:-9D}}",
                         "status": "ready",
                         "identifier": "160.000.006.456.999.01",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -145,6 +149,7 @@
                         "lastModified": "{{DATETIME:-20m}}"
                     },
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": false,
@@ -155,7 +160,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -168,6 +173,8 @@
                         "authoredOn": "{{DATE:-10D}}",
                         "status": "ready",
                         "identifier": "160.000.006.456.334.01",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -176,6 +183,7 @@
                         "lastModified": "{{DATETIME:-20m}}"
                     },
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -186,7 +194,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -199,6 +207,8 @@
                         "authoredOn": "{{DATE:-18D}}",
                         "status": "completed",
                         "identifier": "160.000.006.456.334.02",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -207,6 +217,7 @@
                         "lastModified": "{{DATETIME:-21m}}"
                     },
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": false,
@@ -217,7 +228,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -230,6 +241,8 @@
                         "authoredOn": "{{DATE:-12D}}",
                         "status": "completed",
                         "identifier": "160.000.006.456.334.03",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -238,15 +251,18 @@
                         "lastModified": "{{DATETIME:-22m}}"
                     },
                     {
+                        "flowType": "160",
                         "medicationRequest": {
                             "substitutionAllowed": false,
                             "hasEmergencyServiceFee": false,
-                            "bvg": false
+                            "ser": false
                         },
                         "medicationDispenses": [],
                         "authoredOn": "2023-11-09T08:58:48+00:00",
                         "status": "ready",
                         "identifier": "1234",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "scanner",
                         "communications": [],
                         "avsTransactions": []
@@ -262,11 +278,7 @@
                 "content":
                 [
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "b0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
                         "medicationRequest":
                         {
@@ -278,7 +290,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -343,6 +355,8 @@
                             "insuranceId": "M070759114"
                         },
                         "prescriptionId": "160.000.006.456.999.01",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -351,11 +365,7 @@
                         "lastModified": "{{DATETIME:-20m}}"
                     },
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "b0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
                         "medicationRequest":
                         {
@@ -367,7 +377,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -432,6 +442,8 @@
                             "insuranceId": "M070759114"
                         },
                         "prescriptionId": "160.000.006.456.334.01",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -440,11 +452,7 @@
                         "lastModified": "{{DATETIME:-20m}}"
                     },
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "b0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
                         "medicationRequest":
                         {
@@ -456,7 +464,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -521,6 +529,8 @@
                             "insuranceId": "M070759114"
                         },
                         "prescriptionId": "160.000.006.456.334.02",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -529,11 +539,7 @@
                         "lastModified": "{{DATETIME:-21m}}"
                     },
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "b0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
                         "medicationRequest":
                         {
@@ -545,7 +551,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "2024-01-16",
                             "multiplePrescription":
@@ -610,6 +616,8 @@
                             "insuranceId": "M070759114"
                         },
                         "prescriptionId": "160.000.006.456.334.03",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -618,11 +626,12 @@
                         "lastModified": "{{DATETIME:-22m}}"
                     },
                     {
+                        "flowType": "160",
                         "accessCode": "1234567",
                         "medicationRequest": {
                             "substitutionAllowed": false,
                             "hasEmergencyServiceFee": false,
-                            "bvg": false
+                            "ser": false
                         },
                         "medicationDispenses": [],
                         "medication": {
@@ -634,6 +643,8 @@
                         "authoredOn": "2023-11-09T08:58:48+00:00",
                         "status": "ready",
                         "identifier": "1234",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "scanner",
                         "communications": [],
                         "avsTransactions": []

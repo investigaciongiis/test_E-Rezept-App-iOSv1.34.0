@@ -10,6 +10,8 @@ controls:
     - ctl_tooltip_container
   demoMode:
     - bnr_txt_demo_mode
+  osDeprecationBanner:
+    - bnr_txt_os_deprecation
 migration:
   - amg_txt_and_spinner
 scanner:
@@ -51,6 +53,7 @@ cardWall:
     - cdw_btn_intro_later
     - cdw_btn_intro_cancel
     - cdw_btn_intro_more
+    - cdw_btn_intro_advance
     - cdw_img_intro_main
     - cdw_txt_intro_header_bottom
     - cdw_txt_intro_description
@@ -77,6 +80,7 @@ cardWall:
   canScanner:
     - cdw_scn_btn_close
     - cdw_scn_btn_done
+    - cdw_scn_btn_flashlight
   pinInput:
     - cdw_txt_pin_subtitle
     - cdw_txt_pin_description
@@ -105,11 +109,13 @@ cardWall:
     - cdw_btn_rc_help_next_tip
     - cdw_btn_rc_help_next
 onboarding:
+  progress:
+    - onb_auth_img_progress
   start:
     - onb_txt_start_title
     - onb_img_gematik_logo
     - onb_img_man1
-    - onb_btn_next
+    - onb_btn_start
   welcome:
     - onb_txt_welcome_title
     - onb_img_frau1
@@ -130,14 +136,21 @@ onboarding:
     - onb_auth_txt_alt_description
     - onb_auth_txt_no_biometrics
     - onb_auth_txt_section_title
-    - onb_auth_btn_faceid
-    - onb_auth_btn_touchid
+    - onb_auth_txt_section_subtitle
+    - onb_auth_txt_password_strength
     - onb_auth_btn_password
+    - onb_auth_btn_back
+    - onb_auth_btn_face_id
+    - onb_auth_btn_touch_id
   analytics:
-    - onb_ana_btn_continue
+    - onb_ana_txt_title
+    - onb_ana_txt_subtitle
+    - onb_ana_btn_allow
+    - onb_ana_btn_deny
   legalInfo:
+    - onb_img_progress
     - onb_txt_legal_info_title
-    - onb_btn_confirm
+    - onb_btn_next
     - onb_txt_terms_of_use
     - onb_btn_accept_terms_of_use_and_privacy
     - onb_txt_terms_of_privacy
@@ -263,6 +276,7 @@ settings:
     - stg_ctn_audit_events_event_title
     - stg_ctn_audit_events_event_description
     - stg_ctn_audit_events_event_date
+    - stg_ctn_audit_events_event_telematik_id_info
     - stg_txt_audit_events_last_updated
     - stg_txt_audit_events_activity_indicator
     - stg_txt_audit_events_no_protocol_title
@@ -286,6 +300,7 @@ settings:
     - stg_con_txt_footnote
     - stg_con_txt_mail
     - stg_con_txt_survey
+    - stg_con_txt_diga_survey
     - stg_con_btn_organ_donor
   dataPrivacy:
     - stg_dpr_txt_data_privacy
@@ -297,6 +312,8 @@ settings:
     - stg_tou_txt_terms_of_use
     - stg_ww_terms_of_use
     - stg_btn_terms_of_use_close
+  accessibilityStatement:
+    - stg_btn_accessibility_statement
   tracking:
     - stg_trk_txt_title
     - stg_trk_txt_explanation
@@ -337,6 +354,7 @@ orderDetail:
     - puc_btn_close
   message:
     - msg_txt_title
+    - msg_txt_chips
 mainScreen:
   - erx_btn_login
   - erx_btn_refresh
@@ -346,6 +364,7 @@ mainScreen:
   - erx_detailed_prescription_validity
   - erx_detailed_multiple_prescription_index
   - erx_detailed_self_payer
+  - erx_detailed_diGa_bage
   - erx_detailed_status
   - erx_btn_profile
   - erx_img_profile
@@ -363,9 +382,13 @@ mainScreen:
   - erx_btn_consent_drawer_cancel
   - erx_txt_consent_drawer_title
   - erx_txt_consent_drawer_message
+prescriptionArchive:
+  - arc_btn_segmented_control
+  - arc_btn_segmented_control_prescriptions
+  - arc_btn_segmented_control_digas
 welcomedrawer:
-  - wlcd_btn_login
-  - wlcd_btn_decline
+  - wlcd_btn_pkv_user
+  - wlcd_btn_gkv_user
 profileSelection:
   - pro_txt_selection_profile_list
   - pro_txt_selection_profile_list_entry
@@ -386,7 +409,6 @@ prescriptionDetails:
   - prsc_dtl_btn_edit_title
   - prsc_dtl_btn_toggle_redeem
   - prsc_dtl_btn_toolbar_item
-  - prsc_dtl_toolbar_menu
   - prsc_dtl_toolbar_menu_btn_share
   - prsc_dtl_toolbar_menu_btn_redeem
   - prsc_dtl_toolbar_menu_btn_delete
@@ -478,6 +500,55 @@ prescriptionDetails:
   - prsc_dtl_img_hint_pkv_activate
   - prsc_dtl_img_hint_pkv_no_invoice
   - prsc_dtl_btn_pkv_invoice
+diga:
+ detail:
+    - diga_dtl_btn_main_action
+    - diga_dtl_btn_toolbar_item
+    - diga_dtl_txt_name_header
+    - diga_dtl_txt_patient_header
+    - diga_dtl_btn_archive_toolbar
+    - diga_dtl_btn_unarchive_toolbar
+    - diga_dtl_btn_redeem_again_toolbar
+    - diga_dtl_btn_request_toolbar
+    - diga_dtl_btn_delete_toolbar
+    - diga_dtl_btn_toolbar_menu
+    - diga_dtl_btn_refresh
+    - diga_dtl_txt_app_name
+    - diga_dtl_txt_languages
+    - diga_dtl_txt_platform
+    - diga_dtl_txt_medical_service
+    - diga_dtl_txt_additional_devices
+    - diga_dtl_txt_patient_cost
+    - diga_dtl_txt_production_cost
+    - diga_dtl_txt_patient
+    - diga_dtl_txt_practitioner
+    - diga_dtl_txt_organization
+    - diga_dtl_txt_authoredOn
+    - diga_dtl_txt_decline_note
+    - diga_dtl_btn_description
+    - diga_dtl_btn_support
+    - diga_dtl_btn_main_select_insurance
+    - diga_dtl_btn_main_selected_insurance
+    - diga_dtl_txt_hint_no_connection
+    - diga_dtl_txt_hint_no_ios
+ support:
+    - diga_dtl_support_txt_header
+    - diga_dtl_support_txt_provided_link
+    - diga_dtl_support_btn_open_link
+    - diga_dtl_support_btn_close
+    - diga_dtl_support_btn_open_pdf
+ description:
+    - diga_dtl_description_txt_header
+    - diga_dtl_description_txt_desc
+    - diga_dtl_description_btn_close
+ valid:
+    - diga_dtl_valid_txt_header
+    - diga_dtl_valid_txt_subheader
+    - diga_dtl_valid_txt_start_date
+    - diga_dtl_valid_txt_end_date
+diga_insurance_list:
+  - diga_insurance_list_txt_header
+  - diga_insurance_list_txt_subheader
 pharmacySearch:
   - pha_search_txt_result_list
   - pha_search_txt_result_list_entry
@@ -611,6 +682,13 @@ medicationReminder:
   - med_reminder_drawer_dosage_instruction_info
   - med_reminder_drawer_dosage_instruction_info_title
   - med_reminder_drawer_dosage_instruction_info_description
+  - med_reminder_btn_weekday_monday
+  - med_reminder_btn_weekday_tuesday
+  - med_reminder_btn_weekday_wednesday
+  - med_reminder_btn_weekday_thursday
+  - med_reminder_btn_weekday_friday
+  - med_reminder_btn_weekday_saturday
+  - med_reminder_btn_weekday_sunday
   - med_reminder_btn_repetition_infinite
   - med_reminder_btn_repetition_finite
   - med_reminder_btn_repetition_date_start

@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -140,19 +144,33 @@ final class DefaultUserProfileServiceTests: XCTestCase {
             userSessionProvider: mockUserSessionProvider
         )
 
+        mockProfileOnlineChecker.tokenForClosure = { profile in
+            switch profile.id {
+            case UserProfile.Fixtures.theo.profile.id:
+                return Just(IDPToken.Fixtures.valid).eraseToAnyPublisher()
+            default:
+                fatalError("unknown uuid")
+            }
+        }
+
         mockUserSession.profileReturnValue = Just(UserProfile.Fixtures.theo.profile)
             .setFailureType(to: LocalStoreError.self)
             .eraseToAnyPublisher()
 
-        let isAuthenticatedPublisher = CurrentValueSubject<Bool, Never>(true)
-        mockUserSession.isAuthenticated = isAuthenticatedPublisher
-            .setFailureType(to: UserSessionError.self)
-            .eraseToAnyPublisher()
+        let theoIsActivePublisher = CurrentValueSubject<Bool, Never>(false)
+        let theoMockActivityIndicatingPublishing = MockActivityIndicating()
+        theoMockActivityIndicatingPublishing.isActive = theoIsActivePublisher.eraseToAnyPublisher()
+        let theoMockUserSession = MockUserSession()
+        theoMockUserSession.activityIndicating = theoMockActivityIndicatingPublishing
 
-        let isActivePublisher = CurrentValueSubject<Bool, Never>(false)
-        let mockActivityIndicating = MockActivityIndicating()
-        mockActivityIndicating.isActive = isActivePublisher.eraseToAnyPublisher()
-        mockUserSession.activityIndicating = mockActivityIndicating
+        mockUserSessionProvider.userSessionForClosure = { uuid in
+            switch uuid {
+            case UserProfile.Fixtures.theo.profile.id:
+                return theoMockUserSession
+            default:
+                fatalError("unknown uuid")
+            }
+        }
 
         var userProfilesReceived = [UserProfile]()
 
@@ -172,19 +190,17 @@ final class DefaultUserProfileServiceTests: XCTestCase {
         expect(userProfilesReceived.simplify()) == [.init("Theo Testprofil", .connected, false)]
 
         userProfilesReceived = []
-        isActivePublisher.send(true)
-        isAuthenticatedPublisher.send(false)
-        isActivePublisher.send(false)
+        theoIsActivePublisher.send(true)
+        theoIsActivePublisher.send(false)
         expect(userProfilesReceived.simplify()) ==
             [
                 .init("Theo Testprofil", .connected, true),
-                .init("Theo Testprofil", .never, true),
-                .init("Theo Testprofil", .never, false),
+                .init("Theo Testprofil", .connected, false),
             ]
 
         // Receiving duplicate activity indication does not emit new values
         userProfilesReceived = []
-        isActivePublisher.send(false)
+        theoIsActivePublisher.send(false)
         expect(userProfilesReceived).to(beEmpty())
 
         cancelable.cancel()
@@ -198,6 +214,14 @@ extension IDPToken {
         static let valid = IDPToken(
             accessToken: "",
             expires: Date().addingTimeInterval(10 * 60 * 60),
+            idToken: "",
+            ssoToken: "",
+            tokenType: "",
+            redirect: ""
+        )
+        static let inValid = IDPToken(
+            accessToken: "",
+            expires: Date().addingTimeInterval(-(10 * 60 * 60)),
             idToken: "",
             ssoToken: "",
             tokenType: "",

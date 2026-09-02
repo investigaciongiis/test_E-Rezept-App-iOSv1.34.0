@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 import Combine
 import ComposableArchitecture
@@ -123,6 +127,7 @@ struct CardWallReadCardDomain {
                 profileId: state.profileId,
                 insuranceId: payload?.idNummer,
                 insurance: payload?.organizationName,
+                insuranceIK: payload?.organizationIK,
                 givenName: payload?.givenName,
                 familyName: payload?.familyName
             )
@@ -223,9 +228,19 @@ struct CardWallReadCardDomain {
             state.destination = nil
             return .none
         case .destination(.presented(.alert(.wrongPIN))):
-            return .send(.delegate(.wrongPIN))
+            state.destination = nil
+            return .run { send in
+                // Delay for waiting the close animation Workaround for TCA pullback problem
+                try await schedulers.main.sleep(for: 0.5)
+                await send(.delegate(.wrongPIN))
+            }
         case .destination(.presented(.alert(.wrongCAN))):
-            return .send(.delegate(.wrongCAN))
+            state.destination = nil
+            return .run { send in
+                // Delay for waiting the close animation Workaround for TCA pullback problem
+                try await schedulers.main.sleep(for: 0.5)
+                await send(.delegate(.wrongCAN))
+            }
         case .destination(.presented(.alert(.close))):
             return .send(.delegate(.close))
         case .destination(.presented(.alert(.unlockCard))):

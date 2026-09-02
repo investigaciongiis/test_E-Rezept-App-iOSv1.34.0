@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -37,28 +41,33 @@ extension AppConfiguration.Environment {
     // swiftlint:disable identifier_name
     static let IDP_RISE_PU_URL_TEMP: String = "https://idp.app.ti-dienste.de/.well-known/openid-configuration"
     static let ERP_IBM_PU_URL_TEMP: String = "https://erp.app.ti-dienste.de/"
-    static let APOVZD_PU_URL_TEMP: String = "https://apovzd.app.ti-dienste.de/api/"
+    static let FHIRVZD_PU_URL_TEMP: String = "https://fhir-directory.vzd.ti-dienste.de/"
+    static let API_EREZEPT_GEMATIK_DE_PU_URL_TEMP: String = "https://api.erezept.gematik.de/"
+    static let ORGAN_DONATION_REGISTER_PU_URL_TEMP: String = "https://organspende-register.de/erklaerendenportal/epa"
+    static let ORGAN_DONATION_REGISTER_PU_FALLBACK_URL_TEMP: String = "https://www.organspende-info.de/"
     // swiftlint:enable identifier_name
 }
 
 /// Actual AppConfiguration for all backend services
 struct AppConfiguration: Equatable {
-    internal init?(name: String,
-                   trustAnchor: TrustAnchor,
-                   idp: Server?,
-                   idpDefaultScopes: [String] = ["e-rezept", "openid"],
-                   erp: Server?,
-                   base: String = "https://this.is.the.inner.vau.request/",
-                   apoVzd: Server?,
-                   organDonationUrl: URL?,
-                   clientId: String,
-                   userAgent: String? = nil) {
+    internal init?(
+        name: String,
+        trustAnchor: TrustAnchor,
+        idp: Server?,
+        idpDefaultScopes: [String] = ["e-rezept", "openid"],
+        erp: Server?,
+        base: String = "https://this.is.the.inner.vau.request/",
+        fhirVzd: Server?,
+        eRezept: Server?,
+        organDonationUrl: URL?,
+        clientId: String,
+        userAgent: String? = nil
+    ) {
         self.clientId = clientId
         let userAgent = userAgent ?? "eRp-App-iOS/\(AppVersion.current.productVersion) GMTIK/\(clientId)"
         let sharedHeader: [String: String] = ["User-Agent": userAgent]
-        guard let idp = idp, let erp = erp, let apoVzd = apoVzd else {
-            return nil
-        }
+        guard let idp, let erp, let fhirVzd, let eRezept
+        else { return nil }
         self.name = name
         self.trustAnchor = trustAnchor
         self.idp = idp.url
@@ -67,8 +76,10 @@ struct AppConfiguration: Equatable {
         self.base = URL(string: base)! // swiftlint:disable:this force_unwrapping
         self.erp = erp.url
         erpAdditionalHeader = sharedHeader.merging(erp.header) { _, new in new }
-        self.apoVzd = apoVzd.url
-        apoVzdAdditionalHeader = sharedHeader.merging(apoVzd.header) { _, new in new }
+        self.fhirVzd = fhirVzd.url
+        fhirVzdAdditionalHeader = sharedHeader.merging(fhirVzd.header) { _, new in new }
+        self.eRezept = eRezept.url
+        eRezeptAdditionalHeader = sharedHeader.merging(eRezept.header) { _, new in new }
         self.organDonationUrl = organDonationUrl
     }
 
@@ -99,9 +110,13 @@ struct AppConfiguration: Equatable {
         string: "https://das-e-rezept-fuer-deutschland.de/extauth"
     )! // swiftlint:disable:this force_unwrapping
 
-    // apo vzd
-    let apoVzd: URL
-    let apoVzdAdditionalHeader: [String: String]
+    // FHIR VZD
+    let fhirVzd: URL
+    let fhirVzdAdditionalHeader: [String: String]
+
+    // eRezept backend
+    let eRezept: URL
+    let eRezeptAdditionalHeader: [String: String]
 
     let organDonationUrl: URL?
 
@@ -228,18 +243,45 @@ let ERP_IBM_PU = AppConfiguration.Server(
     header: ["X-api-key": AppConfiguration.Environment.ERP_IBM_PU_X_API_KEY]
 )
 
-// MARK: - ## APOVZD
+// MARK: - ## FHIRVZD
 
 #if TEST_ENVIRONMENT || DEFAULT_ENVIRONMENT_TU || DEFAULT_ENVIRONMENT_RU || DEFAULT_ENVIRONMENT_RU_DEV
-let APOVZD_RU: AppConfiguration.Server? = AppConfiguration.Server(
-    url: AppConfiguration.Environment.APOVZD_RU_URL,
-    header: ["X-API-KEY": AppConfiguration.Environment.APOVZD_RU_X_API_KEY]
+let FHIRVZD_RU: AppConfiguration.Server? = AppConfiguration.Server(
+    url: AppConfiguration.Environment.FHIRVZD_RU_URL,
+    header: [:]
 )
 #endif
 
-let APOVZD_PU = AppConfiguration.Server(
-    url: AppConfiguration.Environment.APOVZD_PU_URL_TEMP,
-    header: ["X-API-KEY": AppConfiguration.Environment.APOVZD_PU_X_API_KEY]
+let FHIRVZD_PU = AppConfiguration.Server(
+    url: AppConfiguration.Environment.FHIRVZD_PU_URL_TEMP,
+    header: [:]
+)
+
+// MARK: - ## eRezept Backend
+
+#if TEST_ENVIRONMENT || DEFAULT_ENVIRONMENT_TU
+let EREZEPT_API_TU: AppConfiguration.Server? = AppConfiguration.Server(
+    url: AppConfiguration.Environment.API_EREZEPT_GEMATIK_DE_TU_URL,
+    header: [
+        "X-API-KEY": AppConfiguration.Environment.API_EREZEPT_GEMATIK_DE_API_TOKEN_TU_URL,
+    ]
+)
+#endif
+
+#if TEST_ENVIRONMENT || DEFAULT_ENVIRONMENT_RU || DEFAULT_ENVIRONMENT_RU_DEV
+let EREZEPT_API_RU: AppConfiguration.Server? = AppConfiguration.Server(
+    url: AppConfiguration.Environment.API_EREZEPT_GEMATIK_DE_RU_URL,
+    header: [
+        "X-API-KEY": AppConfiguration.Environment.API_EREZEPT_GEMATIK_DE_API_TOKEN_RU_URL,
+    ]
+)
+#endif
+
+let EREZEPT_API_PU = AppConfiguration.Server(
+    url: AppConfiguration.Environment.API_EREZEPT_GEMATIK_DE_PU_URL_TEMP,
+    header: [
+        "X-API-KEY": AppConfiguration.Environment.API_EREZEPT_GEMATIK_DE_API_TOKEN_PU_URL,
+    ]
 )
 
 // MARK: - ## OrganDonation
@@ -250,7 +292,7 @@ let ORGAN_DONATION_REGISTER_RU_URL = URL(string: AppConfiguration.Environment.OR
 
 #endif
 
-let ORGAN_DONATION_REGISTER_PU_URL = URL(string: AppConfiguration.Environment.ORGAN_DONATION_REGISTER_PU)
+let ORGAN_DONATION_REGISTER_PU_URL = URL(string: AppConfiguration.Environment.ORGAN_DONATION_REGISTER_PU_URL_TEMP)
 
 // swiftlint:enable identifier_name
 
@@ -263,7 +305,8 @@ let environmentTU: AppConfiguration? = AppConfiguration(
     trustAnchor: TRUSTANCHOR_GemRootCa3TestOnly,
     idp: IDP_RISE_TU,
     erp: ERP_IBM_TU,
-    apoVzd: APOVZD_RU,
+    fhirVzd: FHIRVZD_RU,
+    eRezept: EREZEPT_API_TU,
     organDonationUrl: ORGAN_DONATION_REGISTER_RU_URL,
     clientId: AppConfiguration.Environment.ERP_CLIENT_ID_TU
 )
@@ -277,7 +320,8 @@ let environmentRU: AppConfiguration? = AppConfiguration(
     trustAnchor: TRUSTANCHOR_GemRootCa3TestOnly,
     idp: IDP_RISE_RU,
     erp: ERP_IBM_RU,
-    apoVzd: APOVZD_RU,
+    fhirVzd: FHIRVZD_RU,
+    eRezept: EREZEPT_API_RU,
     organDonationUrl: ORGAN_DONATION_REGISTER_RU_URL,
     clientId: AppConfiguration.Environment.ERP_CLIENT_ID_RU
 )
@@ -292,7 +336,8 @@ let environmentRUDEV: AppConfiguration? = AppConfiguration(
     idp: IDP_RISE_RU,
     idpDefaultScopes: ["e-rezept-dev", "openid"],
     erp: ERP_IBM_RU_DEV,
-    apoVzd: APOVZD_RU,
+    fhirVzd: FHIRVZD_RU,
+    eRezept: EREZEPT_API_RU,
     organDonationUrl: ORGAN_DONATION_REGISTER_RU_URL,
     clientId: AppConfiguration.Environment.ERP_CLIENT_ID_RU_DEV
 )
@@ -305,7 +350,8 @@ let environmentPU: AppConfiguration = {
         trustAnchor: TRUSTANCHOR_GemRootCa3,
         idp: IDP_RISE_PU,
         erp: ERP_IBM_PU,
-        apoVzd: APOVZD_PU,
+        fhirVzd: FHIRVZD_PU,
+        eRezept: EREZEPT_API_PU,
         organDonationUrl: ORGAN_DONATION_REGISTER_PU_URL,
         // [REQ:gemSpec_IDP_Frontend:A_20603] Actual ID
         clientId: AppConfiguration.Environment.ERP_CLIENT_ID_PU

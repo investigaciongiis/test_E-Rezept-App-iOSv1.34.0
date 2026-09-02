@@ -13,6 +13,7 @@
                 "content":
                 [
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -23,7 +24,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -36,6 +37,8 @@
                         "authoredOn": "{{DATE:-9D}}",
                         "status": "ready",
                         "identifier": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -44,6 +47,7 @@
                         "lastModified": "{{DATETIME:-20m}}"
                     },
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -54,7 +58,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -67,6 +71,8 @@
                         "authoredOn": "{{DATE:-9D}}",
                         "status": "ready",
                         "identifier": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -80,6 +86,7 @@
                 "content":
                 [
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -90,7 +97,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -103,6 +110,8 @@
                         "authoredOn": "{{DATE:-9D}}",
                         "status": "in-progress",
                         "identifier": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -111,6 +120,7 @@
                         "lastModified": "{{DATETIME:-2m}}"
                     },
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -121,7 +131,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -134,6 +144,8 @@
                         "authoredOn": "{{DATE:-9D}}",
                         "status": "ready",
                         "identifier": "160.000.006.456.334.16",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -147,6 +159,7 @@
                 "content":
                 [
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -157,7 +170,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -170,6 +183,8 @@
                         "authoredOn": "{{DATE:-9D}}",
                         "status": "in-progress",
                         "identifier": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -178,6 +193,7 @@
                         "lastModified": "{{DATETIME:-2m}}"
                     },
                     {
+                        "flowType": "160",
                         "medicationRequest":
                         {
                             "substitutionAllowed": true,
@@ -188,7 +204,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -201,6 +217,8 @@
                         "authoredOn": "{{DATE:-9D}}",
                         "status": "in-progress",
                         "identifier": "160.000.006.456.334.16",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -221,11 +239,7 @@
                 "content":
                 [
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "a0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
                         "medicationRequest":
                         {
@@ -237,7 +251,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -284,6 +298,8 @@
                             "name": "Dr. Adelheid Ulmenwald"
                         },
                         "identifier": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "organization":
                         {
                             "name": "Count Orff",
@@ -302,6 +318,8 @@
                             "insuranceId": "M070759114"
                         },
                         "prescriptionId": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "source": "server",
                         "communications":
                         [],
@@ -310,11 +328,7 @@
                         "lastModified": "{{DATETIME:-20m}}"
                     },
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "a0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300341",
                         "medicationRequest":
                         {
@@ -326,7 +340,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -373,6 +387,8 @@
                             "name": "Dr. Adelheid Ulmenwald"
                         },
                         "identifier": "160.000.006.456.334.16",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "organization":
                         {
                             "name": "Count Orff",
@@ -404,11 +420,7 @@
                 "content":
                 [
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "a0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
                         "medicationRequest":
                         {
@@ -420,7 +432,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -467,6 +479,8 @@
                             "name": "Dr. Adelheid Ulmenwald"
                         },
                         "identifier": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "organization":
                         {
                             "name": "Count Orff",
@@ -493,11 +507,7 @@
                         "lastModified": "{{DATETIME:-2m}}"
                     },
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "a0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300341",
                         "medicationRequest":
                         {
@@ -509,7 +519,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -556,6 +566,8 @@
                             "name": "Dr. Adelheid Ulmenwald"
                         },
                         "identifier": "160.000.006.456.334.16",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "organization":
                         {
                             "name": "Count Orff",
@@ -587,11 +599,7 @@
                 "content":
                 [
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "a0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300340",
                         "medicationRequest":
                         {
@@ -603,7 +611,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -650,6 +658,8 @@
                             "name": "Dr. Adelheid Ulmenwald"
                         },
                         "identifier": "160.000.006.456.334.15",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "organization":
                         {
                             "name": "Count Orff",
@@ -676,11 +686,7 @@
                         "lastModified": "{{DATETIME:-2m}}"
                     },
                     {
-                        "flowType":
-                        {
-                            "pharmacyOnly":
-                            {}
-                        },
+                        "flowType": "160",
                         "accessCode": "a0bb77ed3034cfbebfceaac88b3a187321d0e3b63de271127d1ff8f1bc300341",
                         "medicationRequest":
                         {
@@ -692,7 +698,7 @@
                                 "unit": "{Package}"
                             },
                             "dosageInstructions": "1-1-1-1",
-                            "bvg": true,
+                            "ser": true,
                             "coPaymentStatus": "0",
                             "authoredOn": "{{DATE}}",
                             "multiplePrescription":
@@ -739,6 +745,8 @@
                             "name": "Dr. Adelheid Ulmenwald"
                         },
                         "identifier": "160.000.006.456.334.16",
+                        "isEURedeemable" : false,
+                        "isSetEURedeemableByPatient" : false,
                         "organization":
                         {
                             "name": "Count Orff",
@@ -774,7 +782,8 @@
             "identifier": "identifier",
             "erxTaskId": "erxTaskId",
             "accessCode": "accessCode",
-            "pharmacyTelematikId": "pharmacyTelematikId",
+            "telematikId": "telematikId",
+            "flowType": "160",
             "payload": {
                 "version": 1,
                 "supplyOptionsType": "shipment",

@@ -1,23 +1,29 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import eRpStyleKit
 import SwiftUI
+import SwiftUIIntrospect
+import UIKit
 
 struct ScrollViewWithStickyHeader<Content: View, Header: View>: View {
     private var header: Header
@@ -45,6 +51,13 @@ struct ScrollViewWithStickyHeader<Content: View, Header: View>: View {
 
                 content
             }
+        }
+        // Mitigate unwanted behaviour of the navigation bar On devices/simulators starting with iOS 18.2:
+        // the ScrollView's content would be visible below the navigation bar when scrolling down.
+        .introspect(.viewController, on: .iOS(.v18)) { (viewController: UIViewController) in
+            guard let scrollView = viewController.view?.recursiveSubviews.compactMap({ $0 as? UIScrollView }).first
+            else { return }
+            viewController.setContentScrollView(scrollView, for: .top)
         }
         .overlayPreferenceValue(StickyHeaderAnchorKey.self, alignment: .top) { stickyHeader in
             if let stickyHeader = stickyHeader {
@@ -148,5 +161,13 @@ struct ScrollViewWithStickyHeader_Preview: PreviewProvider {
                 }
             }
         }
+    }
+}
+
+extension UIView {
+    var recursiveSubviews: [UIView] {
+        var allSubviews = subviews
+        allSubviews.forEach { allSubviews.append(contentsOf: $0.recursiveSubviews) }
+        return allSubviews
     }
 }

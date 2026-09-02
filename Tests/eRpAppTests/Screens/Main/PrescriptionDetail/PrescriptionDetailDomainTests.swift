@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -168,6 +172,7 @@ final class PrescriptionDetailDomainTests: XCTestCase {
         } operation: {
             let prescription = Prescription(
                 erxTask: ErxTask.Fixtures.erxTaskInProgressAndValid,
+                date: TestDate.defaultReferenceDate,
                 dateFormatter: UIDateFormatter.testValue
             )
             let sut = testStore(.init(
@@ -511,7 +516,10 @@ final class PrescriptionDetailDomainTests: XCTestCase {
 
     func testLoadingImageAndShowShareSheet() async {
         let sut = testStore()
-        let expectedUrl: URL? = nil // sut.state.prescription.erxTask.shareUrl()!
+        let expectedUrl =
+            URL( // swiftlint:disable:next line_length
+                string: "https://erezept.gematik.de/prescription#%5B%222390f983-1e67-11b2-8555-63bf44e44fb8%7Ce46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24%7CSaflorbl%C3%BCten-Extrakt%20Pulver%20Peroral%22%5D"
+            )!
         let expectedImage = mockMatrixCodeGenerator.uiImage
         let expectedLoadingState: LoadingState<UIImage, PrescriptionDetailDomain.LoadingImageError> =
             .value(expectedImage)
@@ -533,7 +541,10 @@ final class PrescriptionDetailDomainTests: XCTestCase {
 
     func testLoadingImageAndShowShareSheetWithError() async {
         let sut = testStore()
-        let expectedUrl: URL? = nil // sut.state.prescription.erxTask.shareUrl()!
+        let expectedUrl =
+            URL( // swiftlint:disable:next line_length
+                string: "https://erezept.gematik.de/prescription#%5B%222390f983-1e67-11b2-8555-63bf44e44fb8%7Ce46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24%7CSaflorbl%C3%BCten-Extrakt%20Pulver%20Peroral%22%5D"
+            )!
         let expectedImage = mockMatrixCodeGenerator.uiImage
         let expectedLoadingState: LoadingState<UIImage, PrescriptionDetailDomain.LoadingImageError> =
             .value(expectedImage)
@@ -649,9 +660,9 @@ final class PrescriptionDetailDomainTests: XCTestCase {
 
     func testUpdateMedicationName() async {
         let dateFormatter = UIDateFormatter.previewValue
-        let authoredOn = DemoDate.createDemoDate(.today)
-        let expiresOn = DemoDate.createDemoDate(.ninetyTwoDaysAhead)
-        let acceptedUntil = DemoDate.createDemoDate(.tomorrow)
+        let authoredOn = TestDate.createFormattedDate(.today)
+        let expiresOn = TestDate.createFormattedDate(.ninetyTwoDaysAhead)
+        let acceptedUntil = TestDate.createFormattedDate(.tomorrow)
         let sut = testStore(
             PrescriptionDetailDomain.State(
                 prescription: Prescription(
@@ -779,6 +790,7 @@ final class PrescriptionDetailDomainTests: XCTestCase {
                 erxTask: .init(
                     identifier: "identifier",
                     status: .ready,
+                    flowType: .pharmacyOnly,
                     medicationSchedule: medicationSchedule
                 ),
                 dateFormatter: UIDateFormatter.previewValue
@@ -821,6 +833,7 @@ extension PrescriptionDetailDomainTests {
             ErxTask(
                 identifier: "2390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOn,
@@ -870,11 +883,12 @@ extension PrescriptionDetailDomainTests {
                 erxTask: ErxTask(
                     identifier: "2390f983-1e67-11b2-8555-63bf44e44fb8",
                     status: .ready,
+                    flowType: .pharmacyOnly,
                     accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                     fullUrl: nil,
-                    authoredOn: DemoDate.createDemoDate(.today),
-                    expiresOn: DemoDate.createDemoDate(.ninetyTwoDaysAhead),
-                    acceptedUntil: DemoDate.createDemoDate(.tomorrow),
+                    authoredOn: TestDate.createFormattedDate(.today),
+                    expiresOn: TestDate.createFormattedDate(.ninetyTwoDaysAhead),
+                    acceptedUntil: TestDate.createFormattedDate(.tomorrow),
                     author: "Dr. Dr. med. Carsten van Storchhausen",
                     medication: medicationFixture,
                     medicationRequest: .init(
@@ -922,11 +936,12 @@ extension PrescriptionDetailDomainTests {
                 erxTask: ErxTask(
                     identifier: "2390f983-1e67-11b2-8555-63bf44e44fb8",
                     status: .ready,
+                    flowType: .pharmacyOnly,
                     accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                     fullUrl: nil,
-                    authoredOn: DemoDate.createDemoDate(.today),
-                    expiresOn: DemoDate.createDemoDate(.ninetyTwoDaysAhead),
-                    acceptedUntil: DemoDate.createDemoDate(.tomorrow),
+                    authoredOn: TestDate.createFormattedDate(.today),
+                    expiresOn: TestDate.createFormattedDate(.ninetyTwoDaysAhead),
+                    acceptedUntil: TestDate.createFormattedDate(.tomorrow),
                     author: "Dr. Dr. med. Carsten van Storchhausen",
                     medication: ErxMedication(
                         name: "Saflorblüten-Extrakt Pulver Peroral",

@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -37,6 +41,7 @@ final class EditProfileDomainTests: XCTestCase {
             dependencies.schedulers = Schedulers(uiScheduler: mainQueue.eraseToAnyScheduler())
             dependencies.userSession = mockUserSession
             dependencies.userSessionProvider = mockUserSessionProvider
+            dependencies.changeableUserSessionContainer = mockUsersSessionContainer
             dependencies.profileSecureDataWiper = mockProfileSecureDataWiper
             dependencies.profileDataStore = mockProfileDataStore
             dependencies.userDataStore = mockUserDataStore
@@ -46,6 +51,7 @@ final class EditProfileDomainTests: XCTestCase {
 
     let mainQueue = DispatchQueue.immediate
 
+    var mockUsersSessionContainer: MockUsersSessionContainer!
     var mockAppSecurityManager: MockAppSecurityManager!
     var mockUserSession: MockUserSession!
     var mockProfileDataStore: MockProfileDataStore!
@@ -66,6 +72,7 @@ final class EditProfileDomainTests: XCTestCase {
         mockRouting = MockRouting()
         mockUserSessionProvider = MockUserSessionProvider()
         mockSecureEnclaveSignatureProvider = MockSecureEnclaveSignatureProvider()
+        mockUsersSessionContainer = MockUsersSessionContainer()
     }
 
     func testSavingAnEmptyNameDisplaysError() async {
@@ -157,6 +164,9 @@ final class EditProfileDomainTests: XCTestCase {
     }
 
     func testDeleteProfileConfirmationDialogConfirm() async {
+        mockUsersSessionContainer.userSession = mockUserSession
+        mockUserSession.mockUserDataStore = mockUserDataStore
+
         let sut = testStore(for: Fixtures.profileWithDeleteConfirmation)
 
         mockProfileDataStore.listAllProfilesReturnValue = Just(
@@ -197,6 +207,9 @@ final class EditProfileDomainTests: XCTestCase {
     }
 
     func testDeletingProfileUpdatesSelectedProfile() async {
+        mockUsersSessionContainer.userSession = mockUserSession
+        mockUserSession.mockUserDataStore = mockUserDataStore
+
         let sut = testStore(for: Fixtures.profileWithDeleteConfirmation)
 
         mockProfileDataStore.listAllProfilesReturnValue = Just(
@@ -228,6 +241,9 @@ final class EditProfileDomainTests: XCTestCase {
 
     func testDeleteLastProfileCreatesANewOne() async {
         let sut = testStore(for: Fixtures.profileWithDeleteConfirmation)
+
+        mockUsersSessionContainer.userSession = mockUserSession
+        mockUserSession.mockUserDataStore = mockUserDataStore
 
         let listProfilesPublisher: PassthroughSubject<[Profile], LocalStoreError> = PassthroughSubject()
         mockProfileDataStore.listAllProfilesReturnValue = listProfilesPublisher.eraseToAnyPublisher()
@@ -314,6 +330,9 @@ final class EditProfileDomainTests: XCTestCase {
     }
 
     func testReloginProfileDeletesTokenAndRoutesToMain() async {
+        mockUsersSessionContainer.userSession = mockUserSession
+        mockUserSession.mockUserDataStore = mockUserDataStore
+
         let sut = testStore(for: Fixtures.profileA)
 
         mockProfileDataStore.listAllProfilesReturnValue = Just([ProfilesDomainTests.Fixtures.erxProfileA])
@@ -461,6 +480,7 @@ final class EditProfileDomainTests: XCTestCase {
         mockUserSession.pairingIdpSession = mockIDPSession
         mockUserSessionProvider.userSessionForReturnValue = mockUserSession
         mockProfileSecureDataWiper.wipeSecureDataOfReturnValue = Just(()).eraseToAnyPublisher()
+        mockUsersSessionContainer.userSession = mockUserSession
 
         // when confirming deletion
         await sut.send(.destination(.presented(.alert(.confirmDeleteBiometricPairing)))) { state in

@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 // swiftlint:disable file_length
 
@@ -600,17 +604,14 @@ class EGKSigner: JWTSigner {
     }
 
     // [REQ:BSI-eRp-ePA:O.Cryp_4#7|12] Signature creation with eGK with dedicated C.CH.AUT
-    func sign(message: Data) -> AnyPublisher<Data, Swift.Error> {
+    func sign(message: Data) async throws -> Data {
         // [REQ:gemSpec_IDP_Frontend:A_20700-07] perform signature with OpenHealthCardKit
-        card.sign(data: message)
-            .tryMap { response in
-                if response.responseStatus == ResponseStatus.success, let signature = response.data {
-                    return signature
-                } else {
-                    throw NFCSignatureProviderError.signingFailure(.responseStatus(response.responseStatus))
-                }
-            }
-            .eraseToAnyPublisher()
+        let response = try await card.signAsync(data: message)
+        if response.responseStatus == ResponseStatus.success, let signature = response.data {
+            return signature
+        } else {
+            throw NFCSignatureProviderError.signingFailure(.responseStatus(response.responseStatus))
+        }
     }
 }
 

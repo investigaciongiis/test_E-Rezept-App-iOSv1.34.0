@@ -1,24 +1,29 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
 import ComposableArchitecture
 import eRpKit
+import FHIRVZD
 import MapKit
 import Pharmacy
 import SwiftUI
@@ -170,6 +175,7 @@ struct OrderDetailDomain {
             return loadTasks(taskIds)
         case let .tasksReceived(tasks):
             state.erxTasks = IdentifiedArray(uniqueElements: tasks.sorted())
+            state.timelineEntries = state.timelineEntries.updateChipTexts(with: tasks)
             return .none
         case let .showPickupCode(dmcCode: dmcCode, hrCode: hrCode):
             state.destination = .pickupCode(
@@ -193,8 +199,10 @@ struct OrderDetailDomain {
             guard let pharmacy = state.order?.pharmacy else { return .none }
             return .run { send in
                 await send(.response(.loadAndShowPharmacyReceived(
-                    try await pharmacyRepository.updateFromRemote(by: pharmacy.telematikID)
-                        .asyncResult(\.self)
+                    try await pharmacyRepository.updateFromRemote(
+                        by: pharmacy.telematikID
+                    )
+                    .asyncResult(\.self)
                 )))
             }
         case let .response(.loadAndShowPharmacyReceived(result)):
@@ -205,15 +213,14 @@ struct OrderDetailDomain {
 
                 state.destination = .pharmacyDetail(
                     PharmacyDetailDomain.State(
-                        prescriptions: Shared([]),
-                        selectedPrescriptions: Shared([]),
+                        prescriptions: Shared(value: []),
+                        selectedPrescriptions: Shared(value: []),
                         inRedeemProcess: false,
                         inOrdersMessage: true,
                         pharmacyViewModel: .init(
                             pharmacy: pharmacy,
                             timeOnlyFormatter: uiDateFormatter.timeOnlyFormatter
-                        ),
-                        pharmacyRedeemState: Shared(nil)
+                        )
                     )
                 )
             case let .failure(error):
@@ -349,6 +356,38 @@ extension OrderDetailDomain {
         return erxTaskRepository.save(chargeItems: readChargeItems.map(\.sparseChargeItem))
             .receive(on: schedulers.main)
             .eraseToAnyPublisher()
+    }
+}
+
+extension Array where Element == TimelineEntry {
+    func updateChipTexts(with tasks: [ErxTask]) -> [TimelineEntry] {
+        map { entry in
+            switch entry {
+            case let .dispReq(communication, pharmacy, _):
+                let relatedTasks = tasks.compactMap { $0.medication?.displayName }
+                var chipTexts: [String] = []
+                if relatedTasks.count == 1 {
+                    chipTexts = relatedTasks
+                } else {
+                    chipTexts = [L10n.ordDetailTxtChipAll.text]
+                }
+                return TimelineEntry.dispReq(communication, pharmacy: pharmacy, chipTexts: chipTexts)
+            case let .reply(communication, _),
+                 let .diga(communication, _):
+                let relatedTasks = tasks.filter { task in communication.taskIds.contains(task.identifier) }
+                    .compactMap { $0.medication?.displayName }
+                var chipTexts: [String] = []
+                if relatedTasks.count > 1, relatedTasks.count == tasks.count {
+                    chipTexts = [L10n.ordDetailTxtChipAll.text]
+                } else {
+                    chipTexts = relatedTasks
+                }
+                return TimelineEntry.reply(communication, chipTexts: chipTexts)
+            case .chargeItem,
+                 .internalCommunication:
+                return entry
+            }
+        }
     }
 }
 

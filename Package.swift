@@ -1,20 +1,24 @@
-// swift-tools-version:5.8
+// swift-tools-version:5.9
 //
-//  Copyright (c) 2024 gematik GmbH
-//  
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Copyright (Change Date see Readme), gematik GmbH
+//
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
-//  
-//      https://joinup.ec.europa.eu/software/page/eupl
-//  
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
-//  
+//
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
+//
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
+//
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import PackageDescription
@@ -23,19 +27,26 @@ let package = Package(
     name: "eRpKit",
     defaultLocalization: "de",
     platforms: [
-        .iOS(.v16), .macOS(.v13)
+        .iOS(.v17), .macOS(.v13)
     ],
     products: [
         .library(name: "eRpFeatures", targets: ["eRpFeatures"]),
+        .library(name: "FeatureEURedeem", targets: ["FeatureEURedeem"]),
         .library(name: "eRpStyleKit", targets: ["eRpStyleKit"]),
+        .library(name: "eRpResources", targets: ["eRpResources"]),
         .library(name: "eRpKit", targets: ["eRpKit"]),
         .library(name: "eRpLocalStorage", targets: ["eRpLocalStorage"]),
         .library(name: "eRpRemoteStorage", targets: ["eRpRemoteStorage"]),
         .library(name: "Pharmacy", targets: ["Pharmacy"]),
+        .library(name: "FHIRVZD", targets: ["FHIRVZD"]),
+        .library(name: "BfArM", targets: ["BfArM"]),
+        .library(name: "BfArMLive", targets: ["BfArMLive"]),
         .library(name: "AVS", targets: ["AVS"]),
         .library(name: "IDP", targets: ["IDP"]),
+        .library(name: "IDPLive", targets: ["IDPLive"]),
         .library(name: "FHIRClient", targets: ["FHIRClient"]),
         .library(name: "HTTPClient", targets: ["HTTPClient"]),
+        .library(name: "HTTPClientLive", targets: ["HTTPClientLive"]),
         .library(name: "TestUtils", targets: ["TestUtils"]),
         .library(name: "TrustStore", targets: ["TrustStore"]),
         .library(name: "VAUClient", targets: ["VAUClient"]),
@@ -46,21 +57,24 @@ let package = Package(
         .package(url: "https://github.com/andyjohns/zxcvbn-ios", revision: "bf6083dc17df950c8bdfcf2063859ee1270015fd"),
         .package(url: "https://github.com/apple/FHIRModels", from: "0.5.0"),
         .package(url: "https://github.com/pointfreeco/combine-schedulers", from: "1.0.2"),
-        .package(url: "https://github.com/rcasula/composable-core-location", revision: "40a98e18d0350fd1a1efa83c24aca3044b9b7bd2"),
+        .package(url: "https://github.com/rcasula/composable-core-location", revision: "0f3651bdaf95fcc44acef7de7d9aab0395cc2678"),
         .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "1.5.6"),
-        .package(url: "https://github.com/pointfreeco/swift-composable-architecture", from: "1.15.0"),
+        .package(url: "https://github.com/pointfreeco/swift-composable-architecture", from: "1.19.0"),
         .package(url: "https://github.com/pointfreeco/swift-custom-dump", from: "1.3.2"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.4.1"),
         .package(url: "https://github.com/pointfreeco/swift-identified-collections", from: "1.1.0"),
-        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.17.2"),
+        .package(url: "https://github.com/pointfreeco/swift-sharing", from: "2.5.2"),
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.18.3"),
         .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.1.2"),
         .package(url: "https://github.com/Quick/Nimble", from: "13.0.0"),
         .package(url: "https://github.com/siteline/swiftui-introspect", from: "1.3.0"),
         .package(url: "https://github.com/zxing-cpp/zxing-cpp", from: "2.2.1"),
         .package(url: "https://github.com/gematik/ASN1Kit", from: "1.2.1"),
         .package(url: "https://github.com/gematik/OpenSSL-Swift", from: "4.2.0"),
-        .package(url: "https://github.com/gematik/swift-gemPDFKit", from: "0.1.1"),
+        .package(url: "https://github.com/gematik/swift-gemPDFKit", from: "0.2.2"),
         .package(url: "https://github.com/gematik/ref-OpenHealthCardKit",  from: "5.8.0"),
+        .package(url: "https://github.com/apple/swift-asn1.git", .upToNextMajor(from: "1.0.0")),
+        .package(url: "https://github.com/SwiftGen/SwiftGenPlugin", from: "6.6.0"),
     ],
     targets: [
         .target(
@@ -71,12 +85,18 @@ let package = Package(
                 "eRpKit",
                 "eRpLocalStorage",
                 "Pharmacy",
+                "FHIRVZD",
+                "BfArM",
+                "BfArMLive",
                 "IDP",
+                "IDPLive",
                 "HTTPClient",
+                "HTTPClientLive",
                 "FHIRClient",
                 "TrustStore",
                 "VAUClient",
                 "AVS",
+                "FeatureEURedeem",
                 .product(name: "ASN1Kit", package: "ASN1Kit"),
                 .product(name: "ModelsR4", package: "FHIRModels"),
                 .product(name: "ContentsquareModule", package: "CS_iOS_SDK"),
@@ -108,6 +128,23 @@ let package = Package(
             ],
             plugins: [
                 .plugin(name: "ErpAppPlugin"),
+                .plugin(name: "SwiftGenPlugin", package: "SwiftGenPlugin"),
+            ]
+        ),
+        .target(
+            name: "FeatureEURedeem",
+            dependencies: [
+                "eRpStyleKit",
+                "eRpKit",
+                .product(name: "CasePaths", package: "swift-case-paths"),
+                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+                .product(name: "IdentifiedCollections", package: "swift-identified-collections"),
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
+            ],
+            path: "Sources/FeatureEURedeem",
+            resources: [
+                .process("Resources")
             ]
         ),
         .plugin(
@@ -121,9 +158,21 @@ let package = Package(
 
         .target(
             name: "eRpStyleKit",
+            dependencies: [
+                "eRpResources"
+            ],
+            resources: [
+                .process("Resources")
+            ]
+        ),
+        .target(
+            name: "eRpResources",
             dependencies: [],
             resources: [
                 .process("Resources")
+            ],
+            plugins: [
+              .plugin(name: "SwiftGenPlugin", package: "SwiftGenPlugin")
             ]
         ),
         .target(
@@ -155,6 +204,7 @@ let package = Package(
                 "FHIRClient",
                 "eRpKit",
                 .product(name: "ModelsR4", package: "FHIRModels"),
+                .product(name: "Sharing", package: "swift-sharing"),
             ]
         ),
         .target(
@@ -168,9 +218,40 @@ let package = Package(
             ]
         ),
         .target(
+            name: "FHIRVZD",
+            dependencies: [
+                "Pharmacy",
+                "HTTPClient",
+                "HTTPClientLive",
+                "FHIRClient",
+                "eRpKit",
+                "IDP",
+                // change to swift-sharing & dependencies after TCA update
+                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+                .product(name: "ModelsR4", package: "FHIRModels"),
+                .product(name: "OpenSSL-Swift", package: "OpenSSL-Swift"),
+            ]
+        ),
+        .target(
+            name: "BfArM",
+            dependencies: [
+                "eRpKit",
+                // change to swift-sharing & dependencies after TCA update
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies")
+            ]
+        ),
+        .target(
+            name: "BfArMLive",
+            dependencies: [
+                "BfArM",
+                "HTTPClientLive",
+            ]
+        ),
+        .target(
             name: "AVS",
             dependencies: [
-                "HTTPClient",
+                "HTTPClientLive",
                 .product(name: "OpenSSL-Swift", package: "OpenSSL-Swift"),
                 .product(name: "ASN1Kit", package: "ASN1Kit"),
             ]
@@ -178,11 +259,18 @@ let package = Package(
         .target(
             name: "IDP",
             dependencies: [
-                "HTTPClient",
-                "TrustStore",
-                .product(name: "ASN1Kit", package: "ASN1Kit"),
                 .product(name: "OpenSSL-Swift", package: "OpenSSL-Swift"),
                 .product(name: "CombineSchedulers", package: "combine-schedulers"),
+                .product(name: "CasePaths", package: "swift-case-paths"),
+            ]
+        ),
+        .target(
+            name: "IDPLive",
+            dependencies: [
+                "HTTPClient",
+                "IDP",
+                "TrustStore",
+                .product(name: "ASN1Kit", package: "ASN1Kit"),
             ]
         ),
         .target(
@@ -198,15 +286,23 @@ let package = Package(
             dependencies:  []
         ),
         .target(
+            name: "HTTPClientLive",
+            dependencies: [
+                "HTTPClient",
+            ]
+        ),
+        .target(
             name: "TrustStore",
             dependencies: [
                 "HTTPClient",
                 .product(name: "OpenSSL-Swift", package: "OpenSSL-Swift"),
+                .product(name: "SwiftASN1", package: "swift-asn1"),
             ]
         ),
         .target(
             name: "VAUClient",
             dependencies: [
+                .product(name: "CasePaths", package: "swift-case-paths"),
                 "HTTPClient",
                 "TrustStore",
                 .product(name: "OpenSSL-Swift", package: "OpenSSL-Swift"),
@@ -218,6 +314,7 @@ let package = Package(
                 "HTTPClient",
                 "VAUClient",
                 "IDP",
+                "IDPLive",
                 "TrustStore",
                 .product(name: "Nimble", package: "Nimble"),
                 .product(name: "OpenSSL-Swift", package: "OpenSSL-Swift"),
@@ -271,6 +368,7 @@ let package = Package(
             name: "eRpRemoteStorageTests",
             dependencies: [
                 "eRpRemoteStorage",
+                "HTTPClientLive",
                 "TestUtils",
                 .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
                 .product(name: "CombineSchedulers", package: "combine-schedulers"),
@@ -283,7 +381,22 @@ let package = Package(
         .testTarget(
             name: "PharmacyTests",
             dependencies: [
+                "HTTPClientLive",
                 "TestUtils",
+                "Pharmacy",
+                .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
+                .product(name: "CombineSchedulers", package: "combine-schedulers"),
+                .product(name: "Nimble", package: "Nimble"),
+            ],
+            resources: [
+                .copy("Resources")
+            ]
+        ),
+        .testTarget(
+            name: "FHIRVZDTests",
+            dependencies: [
+                "TestUtils",
+                "FHIRVZD",
                 "Pharmacy",
                 .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
                 .product(name: "CombineSchedulers", package: "combine-schedulers"),
@@ -297,6 +410,7 @@ let package = Package(
             name: "AVSTests",
             dependencies: [
                 "AVS",
+                "HTTPClientLive",
                 "TestUtils",
                 .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
                 .product(name: "Nimble", package: "Nimble"),
@@ -305,7 +419,24 @@ let package = Package(
         .testTarget(
             name: "IDPTests",
             dependencies: [
+                "HTTPClientLive",
                 "IDP",
+                "TestUtils",
+                .product(name: "ASN1Kit", package: "ASN1Kit"),
+                .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
+                .product(name: "CombineSchedulers", package: "combine-schedulers"),
+                .product(name: "Nimble", package: "Nimble"),
+            ],
+            resources: [
+                .copy("Resources")
+            ]
+        ),
+        .testTarget(
+            name: "IDPLiveTests",
+            dependencies: [
+                "HTTPClientLive",
+                "IDP",
+                "IDPLive",
                 "TestUtils",
                 .product(name: "ASN1Kit", package: "ASN1Kit"),
                 .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
@@ -320,6 +451,7 @@ let package = Package(
             name: "FHIRClientTests",
             dependencies: [
                 "FHIRClient",
+                "HTTPClientLive",
                 "TestUtils",
                 .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
                 .product(name: "CombineSchedulers", package: "combine-schedulers"),
@@ -330,9 +462,10 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "HTTPClientTests",
+            name: "HTTPClientLiveTests",
             dependencies: [
                 "HTTPClient",
+                "HTTPClientLive",
                 "TestUtils",
                 .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
                 .product(name: "CombineSchedulers", package: "combine-schedulers"),
@@ -346,6 +479,7 @@ let package = Package(
             name: "TrustStoreTests",
             dependencies: [
                 "TrustStore",
+                "HTTPClientLive",
                 "TestUtils",
                 .product(name: "OHHTTPStubsSwift", package: "OHHTTPStubs"),
                 .product(name: "CombineSchedulers", package: "combine-schedulers"),

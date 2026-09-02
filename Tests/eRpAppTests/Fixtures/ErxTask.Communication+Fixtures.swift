@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 @testable import eRpFeatures
@@ -105,7 +109,55 @@ extension ErxTask.Communication {
             userId: "user_id_1",
             telematikId: "12345.1",
             orderId: "order_id_1",
-            timestamp: DemoDate.createDemoDate(.oneHourAgo)!,
+            timestamp: TestDate.createFormattedDate(.oneHourAgo)!,
+            payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+            isRead: true
+        )
+
+        static let communicationDispReq2ComputedDate: ErxTask.Communication = .init(
+            identifier: "disp_req_1",
+            profile: .dispReq,
+            taskId: "53210f983-1e67-22c5-8955-63bf44e44fb8",
+            userId: "user_id_1",
+            telematikId: "12345.1",
+            orderId: "order_id_1",
+            timestamp: "2021-05-28T10:59:37.098245933+00:00",
+            payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+            isRead: true
+        )
+
+        static let communicationDispReqYesterDay: ErxTask.Communication = .init(
+            identifier: "disp_req_2",
+            profile: .dispReq,
+            taskId: "34235f983-1e67-22c5-8955-63bf44e44fb8",
+            userId: "user_id_1",
+            telematikId: "12345.1",
+            orderId: "order_id_1",
+            timestamp: "2021-05-27T10:59:37.098245933+00:00",
+            payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+            isRead: true
+        )
+
+        static let communicationReply2ComputedDate: ErxTask.Communication = .init(
+            identifier: "disp_reply_1",
+            profile: .reply,
+            taskId: "53210f983-1e67-22c5-8955-63bf44e44fb8",
+            userId: "user_id_1",
+            telematikId: "12345.1",
+            orderId: "order_id_1",
+            timestamp: "2021-05-28T10:59:37.098245933+00:00",
+            payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+            isRead: true
+        )
+
+        static let communicationReplyYesterDay: ErxTask.Communication = .init(
+            identifier: "disp_reply_2",
+            profile: .reply,
+            taskId: "34235f983-1e67-22c5-8955-63bf44e44fb8",
+            userId: "user_id_1",
+            telematikId: "12345.1",
+            orderId: "order_id_1",
+            timestamp: "2021-05-27T10:59:37.098245933+00:00",
             payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
             isRead: true
         )

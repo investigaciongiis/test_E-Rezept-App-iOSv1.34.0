@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -98,7 +102,6 @@ struct PrescriptionDetailDomain {
 
     @Dependency(\.schedulers) var schedulers: Schedulers
     @Dependency(\.userSession) var userSession: UserSession
-    @Dependency(\.serviceLocator) var serviceLocator: ServiceLocator
     @Dependency(\.userProfileService) var userProfileService: UserProfileService
     @Dependency(\.erxTaskRepository) var erxTaskRepository: ErxTaskRepository
     @Dependency(\.chargeItemConsentService) var chargeItemConsentService: ChargeItemConsentService
@@ -374,7 +377,17 @@ struct PrescriptionDetailDomain {
             state.destination = .alert(Alerts.missingTokenAlertState())
             return .none
         case .redeemPressed:
-            return .send(.delegate(.redeem(state.prescription)))
+            return .run { [prescription = state.prescription] send in
+                // disable navigation stack pop transition
+                await UINavigationBar.setAnimationsEnabled(false)
+                await send(.delegate(.redeem(prescription)))
+
+                Task {
+                    try await schedulers.main.sleep(for: 0.01)
+                    // reenable navigation stack transition
+                    await UINavigationBar.setAnimationsEnabled(true)
+                }
+            }
         case let .setNavigation(tag: tag):
             switch tag {
             case .chargeItem:
@@ -528,7 +541,6 @@ struct PrescriptionDetailDomain {
         case .pencilButtonTapped:
             state.focus = .medicationName
             return .none
-
         case let .destination(.presented(.medicationReminder(action: .delegate(delegateAction)))):
             switch delegateAction {
             case let .saveButtonTapped(medicationSchedule):
@@ -591,30 +603,26 @@ extension RemoteStoreError {
 
 extension ErxTask {
     func shareUrl() -> URL? {
-        nil
-        // TODO: sharing task data as url fragment must approved by security first //swiftlint:disable:this todo
-//        let sharedTask = SharedTask(with: self)
-//        guard let encoded = try? JSONEncoder().encode([sharedTask]),
-//              var urlComponents = URLComponents(string: "https://erezept.gematik.de/prescription") else {
-//            return nil
-//        }
-//        urlComponents.fragment = String(data: encoded, encoding: .utf8)
-//        return urlComponents.url
+        let sharedTask = SharedTask(with: self)
+        guard let encoded = try? JSONEncoder().encode([sharedTask]),
+              var urlComponents = URLComponents(string: "https://erezept.gematik.de/prescription") else {
+            return nil
+        }
+        urlComponents.fragment = String(data: encoded, encoding: .utf8)
+        return urlComponents.url
     }
 }
 
 extension Collection where Element == ErxTask {
     func shareUrl() -> URL? {
-        nil
-        // TODO: sharing task data as url fragment must approved by security first //swiftlint:disable:this todo
-//        let shareTasks = map { SharedTask(with: $0).asString }.joined(separator: "&")
-//        guard let encoded = try? JSONEncoder().encode([shareTasks]),
-//              var urlComponents = URLComponents(string: "https://erezept.gematik.de/prescription") else {
-//            return nil
-//        }
-//
-//        urlComponents.fragment = String(data: encoded, encoding: .utf8)
-//        return urlComponents.url
+        let shareTasks = map { SharedTask(with: $0).asString }.joined(separator: "&")
+        guard let encoded = try? JSONEncoder().encode([shareTasks]),
+              var urlComponents = URLComponents(string: "https://erezept.gematik.de/prescription") else {
+            return nil
+        }
+
+        urlComponents.fragment = String(data: encoded, encoding: .utf8)
+        return urlComponents.url
     }
 }
 

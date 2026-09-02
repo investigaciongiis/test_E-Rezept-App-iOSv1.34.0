@@ -1,10 +1,13 @@
 // Generated using Sourcery — https://github.com/krzysztofzablocki/Sourcery
 // DO NOT EDIT
 
+import BfArM
 import Combine
 import eRpKit
 import Foundation
+import HTTPClient
 import IDP
+import IDPLive
 import OpenSSL
 import Pharmacy
 import TrustStore
@@ -183,6 +186,15 @@ class StreamWrappedErxTaskRepository: ErxTaskRepository {
         stream
         	.map { $0.saveLocal(
 				communications: communications
+            ) }
+            .switchToLatest()
+            .eraseToAnyPublisher()
+	}
+
+	func updateLocal(diGaInfo: DiGaInfo) -> AnyPublisher<Bool, ErxRepositoryError> {
+        stream
+        	.map { $0.updateLocal(
+				diGaInfo: diGaInfo
             ) }
             .switchToLatest()
             .eraseToAnyPublisher()
@@ -488,12 +500,6 @@ class StreamWrappedIDPSession: IDPSession {
             .eraseToAnyPublisher()
 	}
 
-	func httpInterceptor(delegate: IDPSessionDelegate?) -> IDPInterceptor {
-        current.httpInterceptor(
-				delegate: delegate
-            )
-	}
-
 	func exchange(token: IDPExchangeToken, challengeSession: ChallengeSession) -> AnyPublisher<IDPToken, IDPError> {
         stream
         	.map { $0.exchange(
@@ -727,6 +733,23 @@ class StreamWrappedPharmacyRepository: PharmacyRepository {
         stream
         	.map { $0.loadAvsCertificates(
 				for: id
+            ) }
+            .switchToLatest()
+            .eraseToAnyPublisher()
+	}
+
+	func fetchInsurance(ikNumber: String) -> AnyPublisher<Insurance?, PharmacyRepositoryError> {
+        stream
+        	.map { $0.fetchInsurance(
+				ikNumber: ikNumber
+            ) }
+            .switchToLatest()
+            .eraseToAnyPublisher()
+	}
+
+	func fetchAllInsurances() -> AnyPublisher<[Insurance], PharmacyRepositoryError> {
+        stream
+        	.map { $0.fetchAllInsurances(
             ) }
             .switchToLatest()
             .eraseToAnyPublisher()
@@ -1061,10 +1084,6 @@ class StreamWrappedUserDataStore: UserDataStore {
 	var appStartCounter: Int {
 		set { current.appStartCounter = newValue }
 		get { current.appStartCounter }
-	}
-	var hideWelcomeDrawer: Bool {
-		set { current.hideWelcomeDrawer = newValue }
-		get { current.hideWelcomeDrawer }
 	}
 	var readInternalCommunications: AnyPublisher<[String], Never> {
 		return stream

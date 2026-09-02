@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -61,15 +65,37 @@ struct MedicationReminderSetupDomain {
             case time(UUID)
             case dose(UUID)
         }
+
+        var repetitionValue: String {
+            if medicationSchedule.weekdays.isEmpty {
+                return L10n.medReminderTxtWeekdayNone.text
+            } else if medicationSchedule.weekdays.count == MedicationSchedule.Weekday.allCases.count {
+                return L10n.medReminderTxtWeekdayEveryDay.text
+            } else {
+                let weekdays = medicationSchedule.weekdays
+                    .sorted(by: { $0.rawValue < $1.rawValue })
+                    .map(\.nameAbbreviated)
+                    .joined(separator: ", ")
+                return weekdays
+            }
+        }
+
+        var isWeekdaySelected: (MedicationSchedule.Weekday) -> Bool {
+            { weekday in
+                medicationSchedule.weekdays.contains(weekday)
+            }
+        }
     }
 
     enum Action: BindableAction, Equatable {
         case addButtonPressed
         case delete(IndexSet)
-        case repetitionTypeChanged(MedicationSchedule.RepetitionType)
         case save
 
         case showRepetitionDetails
+        case repetitionWeekdayButtonTapped(MedicationSchedule.Weekday)
+        case repetitionTypeChanged(MedicationSchedule.RepetitionType)
+
         case showDosageInstructionsInfo
 
         // testing example, should be moved to appDelegate didFinishLaunching
@@ -167,6 +193,13 @@ struct MedicationReminderSetupDomain {
                 }
                 await send(.delegate(.saveButtonTapped(medicationSchedule)))
             }
+        case let .repetitionWeekdayButtonTapped(weekday):
+            if state.medicationSchedule.weekdays.contains(weekday) {
+                state.medicationSchedule.weekdays.remove(weekday)
+            } else {
+                state.medicationSchedule.weekdays.insert(weekday)
+            }
+            return .none
         case let .repetitionTypeChanged(type):
             switch type {
             case .finite:
@@ -270,6 +303,7 @@ extension MedicationSchedule {
             dosageInstructions: "Medication Instructions",
             taskId: "123.4567.890",
             isActive: false,
+            weekdays: [.monday, .wednesday, .friday],
             entries: IdentifiedArray(
                 uniqueElements: [
                     .mock1,
@@ -350,5 +384,43 @@ extension MedicationSchedule.Entry {
             dosageForm: "Dosage(s)",
             amount: "1"
         )
+    }
+}
+
+extension MedicationSchedule.Weekday {
+    var name: String {
+        switch self {
+        case .monday: return L10n.medReminderTxtWeekdayMonday.text
+        case .tuesday: return L10n.medReminderTxtWeekdayTuesday.text
+        case .wednesday: return L10n.medReminderTxtWeekdayWednesday.text
+        case .thursday: return L10n.medReminderTxtWeekdayThursday.text
+        case .friday: return L10n.medReminderTxtWeekdayFriday.text
+        case .saturday: return L10n.medReminderTxtWeekdaySaturday.text
+        case .sunday: return L10n.medReminderTxtWeekdaySunday.text
+        }
+    }
+
+    var nameAbbreviated: String {
+        switch self {
+        case .monday: return L10n.medReminderTxtWeekdayMondayAbbreviated.text
+        case .tuesday: return L10n.medReminderTxtWeekdayTuesdayAbbreviated.text
+        case .wednesday: return L10n.medReminderTxtWeekdayWednesdayAbbreviated.text
+        case .thursday: return L10n.medReminderTxtWeekdayThursdayAbbreviated.text
+        case .friday: return L10n.medReminderTxtWeekdayFridayAbbreviated.text
+        case .saturday: return L10n.medReminderTxtWeekdaySaturdayAbbreviated.text
+        case .sunday: return L10n.medReminderTxtWeekdaySundayAbbreviated.text
+        }
+    }
+
+    var accessibilityIdentifier: String {
+        switch self {
+        case .monday: return A18n.medicationReminder.medReminderBtnWeekdayMonday
+        case .tuesday: return A18n.medicationReminder.medReminderBtnWeekdayTuesday
+        case .wednesday: return A18n.medicationReminder.medReminderBtnWeekdayWednesday
+        case .thursday: return A18n.medicationReminder.medReminderBtnWeekdayThursday
+        case .friday: return A18n.medicationReminder.medReminderBtnWeekdayFriday
+        case .saturday: return A18n.medicationReminder.medReminderBtnWeekdaySaturday
+        case .sunday: return A18n.medicationReminder.medReminderBtnWeekdaySunday
+        }
     }
 }

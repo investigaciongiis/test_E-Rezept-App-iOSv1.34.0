@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -59,6 +63,13 @@ extension DefaultErxTaskCoreDataStore {
             )
             subPredicates.append(comProfile)
         }
+        // exclude communications from DiGas  .taskId.hasPrefix("162.")
+        let taskIdPredicate = NSPredicate(
+            format: "NOT (%K BEGINSWITH %@)",
+            #keyPath(ErxTaskCommunicationEntity.taskId),
+            "162."
+        )
+        subPredicates.append(taskIdPredicate)
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: subPredicates)
         return coreDataCrudable.fetch(request)
             .map { list in
@@ -143,7 +154,8 @@ extension DefaultErxTaskCoreDataStore {
                     // swiftlint:disable:next todo
                     // FIXME: This is potentially broken. Currently it`s possible to redeem a task several times.
                     // That can cause a wrong match between the dispReq and the reply
-                    if newCommunicationEntity.profile == ErxTask.Communication.Profile.reply.rawValue {
+                    if newCommunicationEntity.profile == ErxTask.Communication.Profile.reply.rawValue
+                        || newCommunicationEntity.profile == ErxTask.Communication.Profile.diga.rawValue {
                         // check if in the new communications is also the related disp req
                         var communicationDispReq = communications
                             .first { $0.profile == .dispReq &&

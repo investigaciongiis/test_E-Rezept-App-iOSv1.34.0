@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -32,9 +36,9 @@ struct AppDomain {
             // sourcery: AnalyticsState = main
             // sourcery: AnalyticsScreen = main
             case main
-            // sourcery: AnalyticsState = pharmacySearch
+            // sourcery: AnalyticsState = pharmacy
             // sourcery: AnalyticsScreen = pharmacySearch
-            case pharmacySearch
+            case pharmacy
             // sourcery: AnalyticsState = orders
             // sourcery: AnalyticsScreen = orders
             case orders
@@ -55,7 +59,7 @@ struct AppDomain {
         var destination: Destinations.State
 
         var main: MainDomain.State
-        var pharmacySearch: PharmacySearchDomain.State
+        var pharmacy: PharmacyContainerDomain.State
         var orders: OrdersDomain.State
         var settings: SettingsDomain.State
 
@@ -70,7 +74,7 @@ struct AppDomain {
         init(
             destination: Destinations.State,
             main: MainDomain.State,
-            pharmacySearch: PharmacySearchDomain.State,
+            pharmacy: PharmacyContainerDomain.State,
             orders: OrdersDomain.State,
             settings: SettingsDomain.State,
             unreadOrderMessageCount: Int,
@@ -79,7 +83,7 @@ struct AppDomain {
         ) {
             self.destination = destination
             self.main = main
-            self.pharmacySearch = pharmacySearch
+            self.pharmacy = pharmacy
             self.orders = orders
             self.settings = settings
             self.unreadOrderMessageCount = unreadOrderMessageCount
@@ -99,7 +103,7 @@ struct AppDomain {
         case setNavigation(Destinations.State)
 
         case main(action: MainDomain.Action)
-        case pharmacySearch(action: PharmacySearchDomain.Action)
+        case pharmacy(action: PharmacyContainerDomain.Action)
         case orders(action: OrdersDomain.Action)
         case settings(action: SettingsDomain.Action)
     }
@@ -114,8 +118,8 @@ struct AppDomain {
             MainDomain()
         }
 
-        Scope(state: \.pharmacySearch, action: \.pharmacySearch) {
-            PharmacySearchDomain()
+        Scope(state: \.pharmacy, action: \.pharmacy) {
+            PharmacyContainerDomain()
         }
 
         Scope(state: \.orders, action: \.orders) {
@@ -146,12 +150,12 @@ struct AppDomain {
             return .concatenate(
                 .send(.main(action: .setNavigation(tag: .none))),
                 .send(.orders(action: .resetNavigation)),
-                .send(.pharmacySearch(action: .resetNavigation))
+                .send(.pharmacy(action: .pharmacySearch(.resetNavigation)))
             )
         case .main(action: .horizontalProfileSelection(action: .selectProfile)):
             return .concatenate(
                 .send(.orders(action: .resetNavigation)),
-                .send(.pharmacySearch(action: .resetNavigation))
+                .send(.pharmacy(action: .pharmacySearch(.resetNavigation)))
             )
         case let .isDemoModeReceived(isDemoMode):
             state.isDemoMode = isDemoMode
@@ -197,8 +201,8 @@ struct AppDomain {
                 case .main:
                     state.main.destination = nil
                     return .none
-                case .pharmacySearch:
-                    state.pharmacySearch.destination = nil
+                case .pharmacy:
+                    state.pharmacy.pharmacySearch.destination = nil
                     return .none
                 case .orders:
                     state.orders.destination = nil
@@ -211,7 +215,7 @@ struct AppDomain {
                 state.destination = destination
                 return .none
             }
-        case .main, .settings, .pharmacySearch, .orders:
+        case .main, .settings, .pharmacy, .orders:
             return .none
         }
     }
@@ -226,7 +230,9 @@ extension AppDomain {
         static let state = State(
             destination: .main,
             main: MainDomain.Dummies.state,
-            pharmacySearch: PharmacySearchDomain.Dummies.stateStartView,
+            pharmacy: PharmacyContainerDomain.State(
+                pharmacySearch: PharmacySearchDomain.Dummies.stateStartView
+            ),
             orders: OrdersDomain.Dummies.state,
             settings: SettingsDomain.Dummies.state,
             unreadOrderMessageCount: 0,

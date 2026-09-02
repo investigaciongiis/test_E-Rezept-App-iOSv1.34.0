@@ -1,25 +1,30 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
 @testable import eRpFeatures
 import Foundation
 import HTTPClient
+import HTTPClientLive
 import Nimble
 import OpenSSL
 import TestUtils
@@ -72,10 +77,48 @@ final class TrustStoreIntegrationTests: XCTestCase {
         expect(success) == true
     }
 
+    func testCompleteFlow_async() async throws {
+        let storage = MemStorage()
+        let session = DefaultTrustStoreSession(
+            serverURL: environment.appConfiguration.erp,
+            trustAnchor: environment.appConfiguration.trustAnchor,
+            trustStoreStorage: storage,
+            httpClient: DefaultHTTPClient(
+                urlSessionConfiguration: .ephemeral,
+                interceptors: [
+                    AdditionalHeaderInterceptor(additionalHeader: environment.appConfiguration.erpAdditionalHeader),
+                    LoggingInterceptor(log: .body),
+                ]
+            )
+        )
+
+        let vauCertificate = try await session.vauCertificate()
+        Swift.print("vauCertificate", (vauCertificate.derBytes?.base64EncodedString()) ?? "")
+    }
+
     func testPKICertificatesEndpointsFlow() async throws {
-        // Note: Work in progress. For now test only RealTrustStoreClient instead of DefaultTrustStoreSession
-        guard environment.appConfiguration != integrationTestsEnvironmentPU.appConfiguration else {
-            throw XCTSkip("Skip test because of faulty server side behavior in PU")
+        // There are several possible arguments as "currentRoot" possible that we want to test.
+        let currentRoots: [String]
+        let currentRootsTestEnvironment = [
+            "GEM.RCA3 TEST-ONLY",
+            "GEM.RCA4 TEST-ONLY",
+            "GEM.RCA5 TEST-ONLY",
+            "GEM.RCA6 TEST-ONLY",
+        ]
+        let currentRootsProdEnvironment = [
+            "GEM.RCA3",
+            "GEM.RCA4",
+            "GEM.RCA5",
+            "GEM.RCA6",
+        ]
+        if environment.appConfiguration == integrationTestsEnvironmentTU.appConfiguration
+            || environment.appConfiguration == integrationTestsEnvironmentRU.appConfiguration
+            || environment.appConfiguration == integrationTestsEnvironmentRUDev.appConfiguration {
+            currentRoots = currentRootsTestEnvironment
+        } else if environment.appConfiguration == integrationTestsEnvironmentPU.appConfiguration {
+            currentRoots = currentRootsProdEnvironment
+        } else {
+            throw XCTSkip("No currentRoots found for this environment")
         }
 
         let realTrustStoreClient = RealTrustStoreClient(
@@ -88,13 +131,12 @@ final class TrustStoreIntegrationTests: XCTestCase {
                 ]
             )
         )
-        let trustAnchor = environment.appConfiguration.trustAnchor
 
-        // Load PKI certificates
-        let rootSubjectCn = try trustAnchor.certificate.subjectCN()
-        let pkiCertificates = try await realTrustStoreClient
-            .loadPKICertificatesFromServer(rootSubjectCn: rootSubjectCn)
-        expect(pkiCertificates.caCerts.count) > 0
+        for rootSubjectCn in currentRoots {
+            let pkiCertificates = try await realTrustStoreClient
+                .loadPKICertificatesFromServer(rootSubjectCn: rootSubjectCn)
+            expect(pkiCertificates.caCerts.count) > 0
+        }
 
         // Load VAU certificate
         let vauCertificateResponse = try await realTrustStoreClient.loadVauCertificateFromServer()
@@ -109,25 +151,5 @@ final class TrustStoreIntegrationTests: XCTestCase {
             serialNr: serialNr
         )
         expect(vauCertificateOSCPResponse.count) > 0
-    }
-}
-
-extension X509 {
-    // These helper methods will be moved to the module's code eventually
-    func issuerCn() throws -> String {
-        // this is a "bit" sketchy...
-        // issuerOneLine() should be rather treated as a debug method
-        // and parsing should probably not rely on a string representation of issuerOneLine, maybe look at:
-        // let issuerX500PrincipalDEREncoded = try vauCertificate.issuerX500PrincipalDEREncoded()
-        let issuerOneLine = try issuerOneLine()
-        let split = issuerOneLine.split(separator: "/CN=")
-        return String(split.last!)
-    }
-
-    func subjectCN() throws -> String {
-        // Note: same implementation issues as issuerCN
-        let subjectOneLine = try subjectOneLine()
-        let split = subjectOneLine.split(separator: "/CN=")
-        return String(split.last!)
     }
 }

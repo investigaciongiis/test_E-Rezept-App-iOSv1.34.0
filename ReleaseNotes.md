@@ -1,3 +1,220 @@
+# 1.34.0
+
+### Features (6 changes)
+
+- Add KBV Prescription changes for version 1_3_2
+- Add GEM ERPCharge changes for version 1_1_0
+- Add KBV Prescription changes for version 1_2_0
+- Add GEM Workflow changes for version 1_5_2
+- Add feature flag for sending 1.5 communications to support testing and production environment
+- Add module with scaffold for EU-Prescriptions
+
+### changed (2 changes)
+
+- Rename ErxTask attribute from bvg to ser
+- Present insurance type selection drawer when refresh is tapped
+
+### Bug fixes (5 changes)
+
+- Fix DemoMode PharmacySearch and PKV/GKV drawer
+- Fix InsuranceDrawer padding and EditProfile Accessibility/ UI
+- Update insurance related fields in EditProfileView after part-way insurance change
+- BfDI link in Data Privacy section opens browser
+- Fix Divider in EditProfileView
+
+### Internal changes (6 changes)
+
+- Move assets to resouce module
+- Update dispReq communication version
+- Add eu redeemable flags for UI test data
+- Add smart mock implementation for struct based protocols
+- Added BfArMLive target with live implementation
+- Add BfArM UITests
+
+# Release 1.33.0
+
+### Features (4 changes)
+
+- iOS Version Deprecation View
+- Add new Logos
+- Add url to sharing prescriptions
+- Increase password security by introducing an entry delay
+
+### Bug fixes (7 changes)
+
+- Fix DiGA survey to only show if user has seen DiGA prescription
+- Fixed voice over for delete option in PrescriptionDetailView
+- E-Mail link in data protection policy does now open in Mail App
+- Fix contrasts and accessibility for onboarding
+- Fix pharmacies not respecting specialities in all cases
+- Fix profile icon changes were not reflected on MainView
+- Fix CANCameraScanner accessibility and display issues
+
+### Internal changes (5 changes)
+
+- Update Dependencies & fix redirect message for moved repositories
+- Add new module for handling localization, images & identifier
+- Cleanup Fastfile and add new "prepare_release" lane to automate the manual part of the release
+- Change base Xcode version to 16.4
+- Change list_requirements to use fastlane plugin containing a refactored version of the lane
+
+### Added (1 change)
+
+- Add BfArmClient, Error and Session to handle the communication to the new endpoint
+
+### changed (8 changes)
+
+- Change insurance in profile settings
+- Changed GID list design and added filter for insurance type
+- Change welcome drawer to select GKV PKV 
+- Change help screen for PKV users
+- Make TextField for delivery instructions in the order flow adaptable in
+- Align HealthCardPasswordReadCardView with CardWallReadCardView
+- Refactor CardWallCanView
+- Add navigation icons to buttons
+
+### other (2 changes)
+
+- Separate IDP API from live implementation
+- Separate HTTPClient from live implementation
+
+# Release 1.32.0
+
+### Features (3 changes)
+
+- Add DiGaInsuranceListView/Domain to change/select an Insurance for DiGa
+- Add UITests for DiGA screens
+- Related to ERA-12699: add new entry for accessibility statement in legal info settings
+
+### Bug fixes (10 changes)
+
+- Fix DiGaUITests and wrong button shows when DiGa is not in request state
+- Fix failing Biometrics could show loggedIn despite being unsuccessful
+- Fix unarchiving leading to an empty archive
+- Fix PKV ChargeItem medications containing slashes and other special characters...
+- Fix login not allowing gID on PKV ChargeItemList screen
+- Fix refresh not triggering after gID login.
+- Fix the self service portal link within pharmacy details
+- Fix pdf attachments for exported PDFs are not visible for acrobat reader
+- Fix ERA-12705 After exiting demo mode, no profile is selected and the demo mode...
+- Fixed acceptedUntil display date for DiGa prescriptions
+
+### Internal changes (2 changes)
+
+- Undo scan retries for snapshot tests
+- Fix integration tests for IDP requiring predefined existing KVNR
+
+### changed (3 changes)
+
+- New analytics screen layout
+- New welcome screen layout
+- New legal info screen layout
+
+### removed (1 change)
+
+- Remove last Fasttrack fragments.
+
+# Release 1.31.0
+
+### Features (8 changes)
+
+- Swipe to delete items of MedicationReminderListView
+- Add DiGa Survey badge after successfully retrieving a DiGa Code
+- Add TechnicalDetails screen for DiGas
+- Add auto archive for DiGas, Bugfixes
+- Extend MedicationReminder Setup to use selectable Weekdays
+- Add FHIRVZD SPM module
+- Add update func for DiGaInfo, set DiGaState with erxTask.status, UI ,Snapshottests
+- Add DiGaDetailView, Domain and other subview for DiGa-UI
+
+### Bug fixes (6 changes)
+
+- Fix ERA-12704 PIN korrigieren Button not working on iPhone 8
+- Fix CardWall Login when request
+- Fixed error handling for redeem flow
+- Fixed navigation bar background color when no service option is selected
+- Use pkv flag in KKAppDirectory.Entry to mark insurant as PKV
+- Related to ERA-11647: fix mandatory delivery fields to be enforced for shipment and courier
+
+### Internal changes (2 changes)
+
+- Change Xcode version to 16.3
+- Update TCA and snapshot testing dependencies
+
+### changed (6 changes)
+
+- Change pharmacy info text for FHIRVZD
+- Synchronize FHIRVZD calls with android, add smarter paging for FHIRVZD
+- Update localization
+- Enable FHIRVZD by default, fix minor DiGa issues
+- Change FHIR VZD token expiration and cleanup
+- Rework accessibility of AppAuthenticationView
+
+# Release 1.30.0
+
+### added (7 changes)
+
+- Add ErxDeviceRequest from ModelsR4.DeviceRequest and add Tests for parsing
+- Add FHIRVZD spm module
+- Overview reworked for all redeeming flows
+- Add multiple attachments for chargeitems instead of just one
+- Show telematik ID of event performing agents in audit logs
+- Added UITests with Pharmacy that have missing contact options
+- Support for Spanish and Irish
+
+### internal (4 changes)
+
+- UI tests for all redeem flows
+- Fix Simulator archive not able to access keychain
+- Fix UI tests for redeem options
+- Fix simulator build not starting
+
+### other (1 change)
+
+- De-duplicate CodedError code ids
+
+### fixed (3 changes)
+
+- Fix loading InternalCommunication welcomeMessage should be set as first element in array
+- Fix direct assignment (169) info drawer margin
+- Fix padding OnboardingAnalyticsView
+
+### changed (2 changes)
+
+- Remove deactivated options entries from ChargeItemListDomain
+- Changed MessageUITests to include (prescription) chips for each communication
+
+# Release 1.29.0
+
+### internal (2 changes)
+
+- Updated ComposableCoreLocation
+- Soft deprecate HTTPClient's Combine.Publisher API in favor of async await
+
+### fixed (1 change)
+
+- Remove visible text field cursor from CardWallCANInputView
+
+### added (1 change)
+
+- New primary color for improved accessibility
+
+# Release 1.28.0
+
+### fixed (1 change)
+
+- Fix messages not displaying when onboarding date is not set in rare cases
+
+### added (2 changes)
+
+- Implement GemWorkflow 1.4 FHIR
+- Implement Abgabedaten Profile 1.3
+
+### changed (2 changes)
+
+- tasks which are inProgress to be archived as soon as they hit the expiry date
+- default name of the generated chargeItem pdf to unique name
+
 # Release 1.27.0
 
 ### changed (1 change)

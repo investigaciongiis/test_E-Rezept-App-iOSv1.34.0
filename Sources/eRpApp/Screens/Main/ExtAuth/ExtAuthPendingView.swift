@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import ComposableArchitecture
@@ -22,7 +26,7 @@ import IDP
 import SwiftUI
 
 struct ExtAuthPendingView: View {
-    @Perception.Bindable var store: ExtAuthPendingDomain.Store
+    @Bindable var store: ExtAuthPendingDomain.Store
 
     var background: Color {
         switch store.state.extAuthState {
@@ -76,35 +80,33 @@ struct ExtAuthPendingView: View {
     }
 
     var body: some View {
-        WithPerceptionTracking {
-            VStack {
-                Spacer()
-                    .alert($store.scope(state: \.destination?.extAuthAlert?.alert, action: \.destination.extAuthAlert))
-                if showToast {
-                    HStack(spacing: 16) {
-                        icon()
+        VStack {
+            Spacer()
+                .alert($store.scope(state: \.destination?.extAuthAlert?.alert, action: \.destination.extAuthAlert))
+            if showToast {
+                HStack(spacing: 16) {
+                    icon()
 
-                        text()
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    text()
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                        Button(action: {
-                            store.send(.cancelAllPendingRequests, animation: .easeInOut)
-                        }, label: {
-                            Image(systemName: SFSymbolName.crossIconPlain)
-                        })
-                    }
-                    .transition(.move(edge: .bottom))
-                    .foregroundColor(Color(.secondaryLabel))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding()
-                    .background(background)
-                    .cornerRadius(16)
-                    .padding()
+                    Button(action: {
+                        store.send(.cancelAllPendingRequests, animation: .easeInOut)
+                    }, label: {
+                        Image(systemName: SFSymbolName.crossIconPlain)
+                    })
                 }
+                .transition(.move(edge: .bottom))
+                .foregroundColor(Color(.secondaryLabel))
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding()
+                .background(background)
+                .cornerRadius(16)
+                .padding()
             }
-            .task {
-                await store.send(.registerListener).finish()
-            }
+        }
+        .task {
+            await store.send(.registerListener).finish()
         }
     }
 }

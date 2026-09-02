@@ -2,6 +2,7 @@
 // DO NOT EDIT
 
 import Foundation
+import FeatureEURedeem
 
 
 
@@ -79,7 +80,7 @@ extension AppDomain.Action {
         switch self {
             case let .main(action: action):
                 action.analytics(tracker: tracker)
-            case let .pharmacySearch(action: action):
+            case let .pharmacy(action: action):
                 action.analytics(tracker: tracker)
             case let .orders(action: action):
                 action.analytics(tracker: tracker)
@@ -349,6 +350,27 @@ extension CoPaymentDomain.Action {
         }
     }
 }
+extension CodeDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
+extension ConsentDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
+extension CountrySelectionDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
 extension CreatePasswordDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
@@ -377,9 +399,107 @@ extension DeviceSecurityDomain.Action {
         }
     }
 }
+extension DiGaDetailDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .destination(.presented(action)):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension DiGaDetailDomain.Destination.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .descriptionDiGA(action):
+                action.analytics(tracker: tracker)
+            case let .validDiGa(action):
+                action.analytics(tracker: tracker)
+            case let .supportDiGa(action):
+                action.analytics(tracker: tracker)
+            case let .cardWall(action):
+                action.analytics(tracker: tracker)
+            case let .patient(action):
+                action.analytics(tracker: tracker)
+            case let .practitioner(action):
+                action.analytics(tracker: tracker)
+            case let .organization(action):
+                action.analytics(tracker: tracker)
+            case let .technicalInformations(action):
+                action.analytics(tracker: tracker)
+            case let .insuranceList(action):
+                action.analytics(tracker: tracker)
+            case let .duesInfo(action):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension DiGaInsuranceListDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .destination(.presented(action)):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension DiGaInsuranceListDomain.Destination.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
 extension DosageInstructionsDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
+            default: break
+        }
+    }
+}
+extension EURedeemDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .selection(action):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension EURedeemDomain.Path.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .countrySelection(action):
+                action.analytics(tracker: tracker)
+            case let .prescriptionSelection(action):
+                action.analytics(tracker: tracker)
+            case let .instructions(action):
+                action.analytics(tracker: tracker)
+            case let .code(action):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension EURedeemSelectionDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .destination(.presented(action)):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension EURedeemSelectionDomain.Destination.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .consent(action):
+                action.analytics(tracker: tracker)
+            case let .selectPrescription(action):
+                action.analytics(tracker: tracker)
+            case let .selectCountry(action):
+                action.analytics(tracker: tracker)
             default: break
         }
     }
@@ -601,6 +721,8 @@ extension HealthCardPasswordReadCardDomain.Action {
 extension HealthCardPasswordReadCardDomain.Destination.Action {
     func analytics(tracker: Tracker) {
         switch self {
+            case let .help(action):
+                action.analytics(tracker: tracker)
             default: break
         }
     }
@@ -633,6 +755,13 @@ extension IDPCardWallDomain.Subdomain.Action {
     }
 }
 extension IngredientDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
+extension InstructionsDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
             default: break
@@ -673,9 +802,24 @@ extension MainDomain.Destination.Action {
                 action.analytics(tracker: tracker)
             case let .prescriptionDetail(action):
                 action.analytics(tracker: tracker)
+            case let .medicationReminder(action):
+                action.analytics(tracker: tracker)
+            case let .diGaDetail(action):
+                action.analytics(tracker: tracker)
+            case let .osDeprecation(action):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension MainDomain.Path.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
             case let .redeemMethods(action):
                 action.analytics(tracker: tracker)
-            case let .medicationReminder(action):
+            case let .redeem(action):
+                action.analytics(tracker: tracker)
+            case let .pharmacy(action):
                 action.analytics(tracker: tracker)
             default: break
         }
@@ -800,10 +944,26 @@ extension NewProfileDomain.Destination.Action {
         }
     }
 }
+extension OSDeprecationDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
 extension OnboardingDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
-            case let .registerAuthentication(action: action):
+            default: break
+        }
+    }
+}
+extension OnboardingDomain.Path.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .registerAuth(action):
+                action.analytics(tracker: tracker)
+            case let .registerPassword(action):
                 action.analytics(tracker: tracker)
             default: break
         }
@@ -915,10 +1075,30 @@ extension PharmacyContactDomain.Action {
         }
     }
 }
+extension PharmacyContainerDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .pharmacySearch(action):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
+extension PharmacyContainerDomain.Path.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            case let .redeem(action):
+                action.analytics(tracker: tracker)
+            default: break
+        }
+    }
+}
 extension PharmacyDetailDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
             case let .destination(.presented(action)):
+                action.analytics(tracker: tracker)
+            case let .serviceOption(action):
                 action.analytics(tracker: tracker)
             default: break
         }
@@ -927,10 +1107,6 @@ extension PharmacyDetailDomain.Action {
 extension PharmacyDetailDomain.Destination.Action {
     func analytics(tracker: Tracker) {
         switch self {
-            case let .redeemViaAVS(action):
-                action.analytics(tracker: tracker)
-            case let .redeemViaErxTaskRepository(action):
-                action.analytics(tracker: tracker)
             default: break
         }
     }
@@ -946,6 +1122,8 @@ extension PharmacyRedeemDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
             case let .destination(.presented(action)):
+                action.analytics(tracker: tracker)
+            case let .serviceOption(action):
                 action.analytics(tracker: tracker)
             default: break
         }
@@ -991,10 +1169,6 @@ extension PharmacySearchDomain.Destination.Action {
                 action.analytics(tracker: tracker)
             case let .pharmacyMapSearch(action):
                 action.analytics(tracker: tracker)
-            case let .redeemViaAVS(action):
-                action.analytics(tracker: tracker)
-            case let .redeemViaErxTaskRepository(action):
-                action.analytics(tracker: tracker)
             default: break
         }
     }
@@ -1021,10 +1195,6 @@ extension PharmacySearchMapDomain.Destination.Action {
             case let .pharmacy(action):
                 action.analytics(tracker: tracker)
             case let .filter(action):
-                action.analytics(tracker: tracker)
-            case let .redeemViaAVS(action):
-                action.analytics(tracker: tracker)
-            case let .redeemViaErxTaskRepository(action):
                 action.analytics(tracker: tracker)
             case let .clusterSheet(action):
                 action.analytics(tracker: tracker)
@@ -1059,6 +1229,8 @@ extension PrescriptionArchiveDomain.Destination.Action {
     func analytics(tracker: Tracker) {
         switch self {
             case let .prescriptionDetail(action):
+                action.analytics(tracker: tracker)
+            case let .diGaDetail(action):
                 action.analytics(tracker: tracker)
             default: break
         }
@@ -1176,8 +1348,6 @@ extension RedeemMethodsDomain.Destination.Action {
         switch self {
             case let .matrixCode(action):
                 action.analytics(tracker: tracker)
-            case let .pharmacySearch(action):
-                action.analytics(tracker: tracker)
             default: break
         }
     }
@@ -1190,6 +1360,13 @@ extension RedeemSuccessDomain.Action {
     }
 }
 extension RegisterAuthenticationDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
+extension RegisterPasswordDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
             default: break
@@ -1224,6 +1401,20 @@ extension ScannerDomain.Action {
     }
 }
 extension ScannerDomain.Destination.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
+extension SelectEUPrescriptionsDomain.Action {
+    func analytics(tracker: Tracker) {
+        switch self {
+            default: break
+        }
+    }
+}
+extension ServiceOptionDomain.Action {
     func analytics(tracker: Tracker) {
         switch self {
             default: break

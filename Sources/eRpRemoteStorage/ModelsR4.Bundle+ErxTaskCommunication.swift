@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import eRpKit
@@ -59,8 +63,9 @@ extension ModelsR4.Bundle {
             throw RemoteStorageBundleParsingError.parseError("Could not parse sent value from communication")
         }
 
-        guard let payloadContent = communication.payloadContent else {
-            throw RemoteStorageBundleParsingError.parseError("Could not parse payload value from communication")
+        var payloadJSON: String?
+        if let payloadContent = communication.payloadContent {
+            payloadJSON = payloadContent
         }
 
         return ErxTask.Communication(
@@ -71,7 +76,7 @@ extension ModelsR4.Bundle {
             telematikId: communication.telematikId(for: profile) ?? "",
             orderId: communication.orderId,
             timestamp: timestamp,
-            payloadJSON: payloadContent,
+            payloadJSON: payloadJSON,
             isRead: false
         )
     }
@@ -80,7 +85,7 @@ extension ModelsR4.Bundle {
 extension ModelsR4.Communication {
     func telematikId(for profile: ErxTask.Communication.Profile) -> String? {
         switch profile {
-        case .reply:
+        case .reply, .diga:
             if Workflow.Key.telematikIdKeys.contains(
                 where: { $0.value == sender?.identifier?.system?.value?.url.absoluteString }
             ) {
@@ -101,7 +106,7 @@ extension ModelsR4.Communication {
 
     func kvID(for profile: ErxTask.Communication.Profile) -> String? {
         switch profile {
-        case .reply:
+        case .reply, .diga:
             return recipient?.first { recipient in
                 Workflow.Key.kvIDKeys.contains {
                     $0.value == recipient.identifier?.system?.value?.url.absoluteString
@@ -143,16 +148,29 @@ extension ErxTask.Communication.Profile {
     init?(rawValue: RawValue) {
         switch rawValue {
         case Workflow.Key.communicationReply[.v1_1_1],
-             Workflow.Key.communicationReply[.v1_2_0]:
+             Workflow.Key.communicationReply[.v1_2_0],
+             Workflow.Key.communicationReply[.v1_3_0],
+             Workflow.Key.communicationReply[.v1_4_3],
+             Workflow.Key.communicationReply[.v1_5_2]:
             self = .reply
         case Workflow.Key.communicationDispReq[.v1_1_1],
-             Workflow.Key.communicationDispReq[.v1_2_0]:
+             Workflow.Key.communicationDispReq[.v1_2_0],
+             Workflow.Key.communicationDispReq[.v1_3_0],
+             Workflow.Key.communicationDispReq[.v1_4_3],
+             Workflow.Key.communicationDispReq[.v1_5_2]:
             self = .dispReq
         case Workflow.Key.communicationInfoReq[.v1_1_1],
-             Workflow.Key.communicationInfoReq[.v1_2_0]:
+             Workflow.Key.communicationInfoReq[.v1_2_0],
+             Workflow.Key.communicationInfoReq[.v1_3_0],
+             Workflow.Key.communicationInfoReq[.v1_4_3]:
             self = .infoReq
+        case Workflow.Key.communicationDiga[.v1_5_2]:
+            self = .diga
         case Workflow.Key.communicationRepresentative[.v1_1_1],
-             Workflow.Key.communicationRepresentative[.v1_2_0]:
+             Workflow.Key.communicationRepresentative[.v1_2_0],
+             Workflow.Key.communicationRepresentative[.v1_3_0],
+             Workflow.Key.communicationRepresentative[.v1_4_3],
+             Workflow.Key.communicationRepresentative[.v1_5_2]:
             self = .representative
         default:
             self = .none

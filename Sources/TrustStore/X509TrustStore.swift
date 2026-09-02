@@ -1,26 +1,31 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Foundation
 import OpenSSL
 
-struct X509TrustStore: TrustStore {
+struct X509TrustStore {
     // [REQ:gemSpec_Krypt:A_21218]
+    // [REQ:gemSpec_Krypt:A_24470]
     // [REQ:gemSpec_eRp_FdV:A_20032-01]
     // Category A: Cross root certificates
     let rootCa: X509
@@ -35,7 +40,13 @@ struct X509TrustStore: TrustStore {
     // Category D: IDP certificates
     let idpCerts: [X509]
 
-    init(trustAnchor: X509, addRoots: [X509], caCerts: [X509], eeCerts: [X509]) throws {
+    init(
+        trustAnchor: X509,
+        addRoots: [X509],
+        caCerts: [X509],
+        eeCerts: [X509],
+        validationTime: Date? = nil
+    ) throws {
         rootCa = trustAnchor
 
         // Category A:
@@ -44,17 +55,24 @@ struct X509TrustStore: TrustStore {
         //  so a simple forEach loop is already sufficient here. See also gemSpec_Krypt A_21216.
         var validatedAddRoots: [X509] = []
         try addRoots.forEach { addRoot in
-            if try addRoot.validateWith(trustStore: [trustAnchor] + validatedAddRoots) {
+            if try addRoot.validateWith(
+                trustStore: [trustAnchor] + validatedAddRoots,
+                validationTime: validationTime
+            ) {
                 validatedAddRoots.append(addRoot)
             }
         }
         self.addRoots = validatedAddRoots
 
         // Category B:
-        self.caCerts = Self.filter(caCerts: caCerts, trusting: [rootCa] + addRoots)
+        self.caCerts = Self.filter(caCerts: caCerts, trusting: [rootCa] + addRoots, validationTime: validationTime)
 
         // Category C and D:
-        let vauAndIdpCerts = Self.filter(eeCerts: eeCerts, trusting: [rootCa] + addRoots + self.caCerts)
+        let vauAndIdpCerts = Self.filter(
+            eeCerts: eeCerts,
+            trusting: [rootCa] + addRoots + self.caCerts,
+            validationTime: validationTime
+        )
         guard let vauCert = vauAndIdpCerts.vauCerts.first, vauAndIdpCerts.vauCerts.count == 1 else {
             throw TrustStoreError.noCertificateFound
         }
@@ -62,13 +80,38 @@ struct X509TrustStore: TrustStore {
         idpCerts = vauAndIdpCerts.idpCerts
     }
 
-    init(trustAnchor: TrustAnchor, certList: CertList) throws {
+    init(trustAnchor: TrustAnchor, certList: CertList,
+         validationTime: Date? = nil) throws {
         // Expect certificates to be DER formatted
         let addRoots = certList.addRoots.compactMap { try? X509(der: $0) }
         let caCerts = certList.caCerts.compactMap { try? X509(der: $0) }
         let eeCerts = certList.eeCerts.compactMap { try? X509(der: $0) }
 
-        try self.init(trustAnchor: trustAnchor.certificate, addRoots: addRoots, caCerts: caCerts, eeCerts: eeCerts)
+        try self.init(
+            trustAnchor: trustAnchor.certificate,
+            addRoots: addRoots,
+            caCerts: caCerts,
+            eeCerts: eeCerts,
+            validationTime: validationTime
+        )
+    }
+
+    init(trustAnchor: TrustAnchor, pkiCertificates: PKICertificates, vauCertData: Data,
+         validationTime: Date? = nil) throws {
+        // Expect certificates to be DER formatted
+        let addRoots = pkiCertificates.addRoots.compactMap { try? X509(der: $0) }
+        let caCerts = pkiCertificates.caCerts.compactMap { try? X509(der: $0) }
+        guard let vauCert = try? X509(der: vauCertData)
+        else {
+            throw TrustStoreError.internal(error: .vauCertificateUnexpectedFormat)
+        }
+        try self.init(
+            trustAnchor: trustAnchor.certificate,
+            addRoots: addRoots,
+            caCerts: caCerts,
+            eeCerts: [vauCert],
+            validationTime: validationTime
+        )
     }
 
     var certList: CertList {
@@ -76,6 +119,12 @@ struct X509TrustStore: TrustStore {
         let caCerts = self.caCerts.compactMap(\.derBytes)
         let eeCerts = ([vauCert] + idpCerts).compactMap(\.derBytes)
         return CertList(addRoots: addRoots, caCerts: caCerts, eeCerts: eeCerts)
+    }
+
+    var pkiCertificates: PKICertificates {
+        let addRoots = self.addRoots.compactMap(\.derBytes)
+        let caCerts = self.caCerts.compactMap(\.derBytes)
+        return PKICertificates(addRoots: addRoots, caCerts: caCerts)
     }
 
     func validate(certificate: X509) -> Bool {
@@ -99,9 +148,13 @@ extension X509TrustStore {
     ///
     /// - Returns: true on successful matching/validation, false if not successful or error
     func checkEeCertificatesStatus(with ocspResponses: [OCSPResponse]) throws -> Bool {
-        // [REQ:gemSpec_Krypt:A_21218] OCSP responder certificates must be verifiable by the trust store
+        // [REQ:gemSpec_Krypt:A_21218] OCSP responder certificates must be verifiable by the TrustStore
+        // [REQ:gemSpec_Krypt:A_25060#3] OCSP responder certificates must be verifiable by the TrustStore
         let verifiedOCSPResponses = basicVerifyFilter(ocspResponses: ocspResponses)
-        guard verifiedOCSPResponses.allSatisfy({ $0.status() == .successful }) else { return false }
+        guard
+            !verifiedOCSPResponses.isEmpty,
+            verifiedOCSPResponses.allSatisfy({ $0.status() == .successful })
+        else { return false }
 
         let eeCertAndSignerTuple: [(X509, X509)] = try eeCerts.map { eeCertificate -> (X509, X509) in
             try (eeCertificate, retrieveSignerFromCaCertificates(eeCertificate: eeCertificate))
@@ -113,7 +166,8 @@ extension X509TrustStore {
                 try response.certificateStatus(for: eeCertificate, issuer: signer) == OCSPResponse.CertStatus.good
             }
         }
-        guard matchedResponses.allSatisfy({ $0 != nil }) else { return false }
+        guard matchedResponses.allSatisfy({ $0 != nil })
+        else { return false }
 
         // [REQ:gemSpec_Krypt:A_21218] For every OCSP response there must be a matching EE certificate
         let matchedEeCerts = try ocspResponses.map { response in
@@ -126,7 +180,8 @@ extension X509TrustStore {
         return true
     }
 
-    // [REQ:gemSpec_Krypt:A_21218] OCSP responder certificates must be verifiable by the trust store
+    // [REQ:gemSpec_Krypt:A_21218] OCSP responder certificates must be verifiable by the TrustStore
+    // [REQ:gemSpec_Krypt:A_25060#4] OCSP responder certificates must be verifiable by the TrustStore
     private func basicVerifyFilter(ocspResponses: [OCSPResponse]) -> [OCSPResponse] {
         ocspResponses.filter { ocspResponse in
             if let ocspResponseSigner = try? ocspResponse.getSigner(),
@@ -151,9 +206,9 @@ extension X509TrustStore {
     private static let caCertRegex =
         try! NSRegularExpression(pattern: "CN=GEM\\.KOMP-CA\\d+") // swiftlint:disable:this force_try
 
-    static func filter(caCerts: [X509], trusting trustStore: [X509]) -> [X509] {
+    static func filter(caCerts: [X509], trusting trustStore: [X509], validationTime: Date? = nil) -> [X509] {
         caCerts.filter { caCert in
-            guard let chainCheck = try? caCert.validateWith(trustStore: trustStore),
+            guard let chainCheck = try? caCert.validateWith(trustStore: trustStore, validationTime: validationTime),
                   let subjectOneLine = try? caCert.subjectOneLine()
             else {
                 return false
@@ -168,10 +223,18 @@ extension X509TrustStore {
     }
 
     // [REQ:gemSpec_Krypt:A_21218:(4)] Check ee_certs against category A+B certificates
+    // [REQ:gemSpec_Krypt:A_A_25061] Check ee_certs against category A+B certificates
     typealias VauAndIpdCerts = (vauCerts: [X509], idpCerts: [X509])
-    static func filter(eeCerts: [X509], trusting trustStore: [X509]) -> VauAndIpdCerts {
+    static func filter(
+        eeCerts: [X509],
+        trusting trustStore: [X509],
+        validationTime: Date? = nil
+    ) -> VauAndIpdCerts {
         eeCerts.reduce(([X509](), [X509]())) { vauAndIdpCerts, eeCert in
-            guard let chainCheck = try? eeCert.validateWith(trustStore: trustStore), chainCheck == true else {
+            guard
+                let chainCheck = try? eeCert.validateWith(trustStore: trustStore, validationTime: validationTime),
+                chainCheck == true
+            else {
                 return vauAndIdpCerts
             }
 

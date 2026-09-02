@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 // swiftlint:disable type_body_length file_length
 
@@ -394,6 +398,36 @@ public class DefaultErxTaskRepository: ErxTaskRepository {
             .eraseToAnyPublisher()
     }
 
+    /// Updates `DiGaInfo` property to local data store.
+    /// - Parameter diGaInfo: new`DiGaInfo` that should be updated.
+    public func updateLocal(diGaInfo: DiGaInfo) -> AnyPublisher<Bool, ErrorType> {
+        disk.update(diGaInfo: diGaInfo)
+            .mapError(ErrorType.local)
+            .eraseToAnyPublisher()
+    }
+
+    public func setLocalDiGaInfo(for tasks: [ErxTask]) -> AnyPublisher<Bool, ErrorType> {
+        let taskPublishers: [AnyPublisher<Bool, ErrorType>] =
+            tasks.compactMap { task in
+                if task.deviceRequest?.appName != nil, task.deviceRequest?.diGaInfo == nil {
+                    // task with DiGa and create new DiGaInfo, return bool value of result from save function
+                    return self.disk.update(diGaInfo: DiGaInfo(diGaState: .request, taskId: task.identifier))
+                        .mapError(ErrorType.local)
+                        .eraseToAnyPublisher()
+                }
+                // task without DiGa just return true, don't expect anything
+                return Just(true)
+                    .setFailureType(to: ErrorType.self)
+                    .eraseToAnyPublisher()
+            }
+        return Publishers.MergeMany(taskPublishers)
+            .collect()
+            .map { result in
+                result.allSatisfy { $0 == true }
+            }
+            .eraseToAnyPublisher()
+    }
+
     /// Returns a count for all unread communications for the given  communication profile
     /// and for all unread ChargeItems
     /// - Parameter profile: Communication profile for which you want to have the count
@@ -416,8 +450,11 @@ public class DefaultErxTaskRepository: ErxTaskRepository {
                 let uniqueCommunications = communications.filterUnique()
                 // make sure there is a communication to an existing charge item
                 // since there can be chargeItems without orders
-                let taskIds = uniqueCommunications.map(\.taskId)
-                let relevantChargeItems = chargeItems.filter { taskIds.contains($0.identifier) }
+                let taskIds = uniqueCommunications.map(\.taskIds)
+                let relevantChargeItems = chargeItems.filter { chargeItem in taskIds.contains { task in
+                    task.contains(chargeItem.identifier)
+                }
+                }
                 var count = 0
                 count += uniqueCommunications.filter { $0.isRead == false }.count
                 count += relevantChargeItems.filter { $0.isRead == false }.count

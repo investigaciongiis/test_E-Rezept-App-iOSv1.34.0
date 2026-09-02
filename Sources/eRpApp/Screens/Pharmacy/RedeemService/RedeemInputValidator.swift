@@ -1,23 +1,30 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
 //
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
+//
+
+// swiftlint:disable file_length
 
 import AVS
 import Dependencies
+import DependenciesMacros
 import eRpKit
 import Foundation
 
@@ -26,25 +33,52 @@ public enum Validity: Equatable {
     case invalid(String)
 }
 
+@DependencyClient
+struct RedeemOrderInputValidator {
+    var type: @Sendable (RedeemServiceOption?) -> RedeemInputValidator?
+}
+
+extension RedeemOrderInputValidator: DependencyKey {
+    static let liveValue: Self = {
+        @Dependency(\.avsMessageValidator) var avsMessageValidator
+        @Dependency(\.erxTaskOrderValidator) var erxTaskOrderValidator
+
+        return Self { option in
+            switch option {
+            case .avs:
+                return avsMessageValidator
+            case .erxTaskRepository, .erxTaskRepositoryAvailable:
+                return erxTaskOrderValidator
+            case .noService, .none:
+                return nil
+            }
+        }
+    }()
+}
+
+extension DependencyValues {
+    var redeemOrderInputValidator: RedeemOrderInputValidator {
+        get { self[RedeemOrderInputValidator.self] }
+        set { self[RedeemOrderInputValidator.self] = newValue }
+    }
+}
+
+extension RedeemOrderInputValidator: TestDependencyKey {
+    static let previewValue = Self()
+    static let testValue = Self()
+}
+
 protocol RedeemInputValidator {
     var service: RedeemServiceOption { get }
 
     func isValid(version: Int) -> Validity
-
     func isValid(name: String?) -> Validity
-
     func isValid(street: String?) -> Validity
-
     func isValid(zip: String?) -> Validity
-
     func isValid(city: String?) -> Validity
-
     func isValid(hint: String?) -> Validity
-
     func isValid(text: String?) -> Validity
-
     func isValid(phone: String?) -> Validity
-
     func isValid(mail: String?) -> Validity
 
     func ifDeliveryOrShipmentThenIsNonEmptyPhoneOrNonEmptyMail(
@@ -52,6 +86,15 @@ protocol RedeemInputValidator {
         phone: String?,
         mail: String?
     ) -> Validity
+
+    func onPremiseOrElseIsNonEmptyContactData( // swiftlint:disable:this function_parameter_count
+        optionType: RedeemOption,
+        name: String?,
+        street: String?,
+        zip: String?,
+        city: String?,
+        phone: String?
+    ) -> Bool
 }
 
 struct RedeemInputValidatorDependency: DependencyKey {
@@ -239,6 +282,22 @@ extension AVSMessage {
             )
         }
 
+        func onPremiseOrElseIsNonEmptyContactData( // swiftlint:disable:this function_parameter_count
+            optionType: RedeemOption,
+            name: String?,
+            street: String?,
+            zip: String?,
+            city: String?,
+            phone: String?
+        ) -> Bool {
+            switch optionType {
+            case .onPremise:
+                return true
+            case .shipment, .delivery:
+                return isCompleteContactData(name: name, street: street, zip: zip, city: city, phone: phone)
+            }
+        }
+
         var service: RedeemServiceOption {
             .avs
         }
@@ -250,6 +309,11 @@ extension AVSMessage {
             case let (phone?, nil): return !phone.isEmpty
             case let (nil, mail?): return !mail.isEmpty
             }
+        }
+
+        func isCompleteContactData(name: String?, street: String?, zip: String?, city: String?,
+                                   phone: String?) -> Bool {
+            name != nil && street != nil && zip != nil && city != nil && phone != nil
         }
     }
 }
@@ -397,8 +461,29 @@ extension ErxTaskOrder {
             }
         }
 
+        func onPremiseOrElseIsNonEmptyContactData( // swiftlint:disable:this function_parameter_count
+            optionType: RedeemOption,
+            name: String?,
+            street: String?,
+            zip: String?,
+            city: String?,
+            phone: String?
+        ) -> Bool {
+            switch optionType {
+            case .onPremise:
+                return true
+            case .shipment, .delivery:
+                return isCompleteContactData(name: name, street: street, zip: zip, city: city, phone: phone)
+            }
+        }
+
         var service: RedeemServiceOption {
             .erxTaskRepository
+        }
+
+        func isCompleteContactData(name: String?, street: String?, zip: String?, city: String?,
+                                   phone: String?) -> Bool {
+            name != nil && street != nil && zip != nil && city != nil && phone != nil
         }
     }
 }
@@ -420,41 +505,23 @@ extension DependencyValues {
 struct DemoRedeemInputValidator: RedeemInputValidator {
     var service: RedeemServiceOption = .erxTaskRepository
 
-    func isValid(version _: Int) -> Validity {
-        .valid
-    }
+    func isValid(version _: Int) -> Validity { .valid }
 
-    func isValid(name _: String?) -> Validity {
-        .valid
-    }
+    func isValid(name _: String?) -> Validity { .valid }
 
-    func isValid(street _: String?) -> Validity {
-        .valid
-    }
+    func isValid(street _: String?) -> Validity { .valid }
 
-    func isValid(zip _: String?) -> Validity {
-        .valid
-    }
+    func isValid(zip _: String?) -> Validity { .valid }
 
-    func isValid(city _: String?) -> Validity {
-        .valid
-    }
+    func isValid(city _: String?) -> Validity { .valid }
 
-    func isValid(hint _: String?) -> Validity {
-        .valid
-    }
+    func isValid(hint _: String?) -> Validity { .valid }
 
-    func isValid(text _: String?) -> Validity {
-        .valid
-    }
+    func isValid(text _: String?) -> Validity { .valid }
 
-    func isValid(phone _: String?) -> Validity {
-        .valid
-    }
+    func isValid(phone _: String?) -> Validity { .valid }
 
-    func isValid(mail _: String?) -> Validity {
-        .valid
-    }
+    func isValid(mail _: String?) -> Validity { .valid }
 
     func ifDeliveryOrShipmentThenIsNonEmptyPhoneOrNonEmptyMail(
         optionType _: RedeemOption,
@@ -462,6 +529,17 @@ struct DemoRedeemInputValidator: RedeemInputValidator {
         mail _: String?
     ) -> Validity {
         .valid
+    }
+
+    func onPremiseOrElseIsNonEmptyContactData( // swiftlint:disable:this function_parameter_count
+        optionType _: RedeemOption,
+        name _: String?,
+        street _: String?,
+        zip _: String?,
+        city _: String?,
+        phone _: String?
+    ) -> Bool {
+        true
     }
 }
 
@@ -475,3 +553,5 @@ extension String {
         return NSPredicate(format: "SELF MATCHES %@", emailRegex).evaluate(with: self)
     }
 }
+
+// swiftlint:enable file_length

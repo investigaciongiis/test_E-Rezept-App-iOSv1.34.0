@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Foundation
@@ -39,23 +43,35 @@ public enum TrustStoreError: Swift.Error {
     // sourcery: errorCode = "06"
     /// Internal error
     case `internal`(error: InternalError)
+    // sourcery: errorCode = "07"
+    /// When no valid VAU certificate can be provided by the system at the moment
+    case noValidVauCertificateAvailable
+    // sourcery: errorCode = "08"
+    /// When a certificate is of unexpected (e.g. not parsable) format
+    case malformedCertificate
 
     // sourcery: CodedError = "561"
     public enum InternalError: Swift.Error {
-        // sourcery: errorCode = 01
+        // sourcery: errorCode = "01"
         case loadOCSPCheckedTrustStoreUnexpectedNil
-        // sourcery: errorCode = 02
+        // sourcery: errorCode = "02"
         case loadCertListFromServerUnexpectedNil
-        // sourcery: errorCode = 03
+        // sourcery: errorCode = "03"
         case loadOCSPListFromServerUnexpectedNil
-        // sourcery: errorCode = 04
+        // sourcery: errorCode = "04"
         case trustStoreCertListUnexpectedNil
-        // sourcery: errorCode = 05
+        // sourcery: errorCode = "05"
         case loadOCSPResponsesUnexpectedNil
-        // sourcery: errorCode = 06
+        // sourcery: errorCode = "06"
         case missingSignerForEECertificate
-        // sourcery: errorCode = 07
+        // sourcery: errorCode = "07"
         case notImplemented
+        // sourcery: errorCode = "08"
+        case trustAnchorUnexpectedFormat
+        // sourcery: errorCode = "09"
+        case vauCertificateUnexpectedFormat
+        // sourcery: errorCode = "10"
+        case trustStoreCreationFailed
     }
 }
 
@@ -95,6 +111,8 @@ extension TrustStoreError: Equatable, LocalizedError {
         case .eeCertificateOCSPStatusVerification: return "TrustStoreError.eeCertificateOCSPStatusVerification"
         case let .unspecified(error: error): return error.localizedDescription
         case let .internal(error: error): return error.localizedDescription
+        case .noValidVauCertificateAvailable: return "TrustStoreError.noValidVauCertificateAvailable"
+        case .malformedCertificate: return "TrustStoreError.malformedCertificate"
         }
     }
 }

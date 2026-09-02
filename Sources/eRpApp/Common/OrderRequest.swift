@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import AVS
@@ -26,6 +30,7 @@ import Pharmacy
 protocol eRpRemoteStorageOrder {
     var version: String { get }
     var redeemType: RedeemOption { get }
+    var flowType: String { get }
     var name: String? { get }
     var address: Address? { get }
     var hint: String? { get }
@@ -41,6 +46,7 @@ protocol AVSOrder {
     var version: String { get }
     var redeemType: RedeemOption { get }
     var name: String? { get }
+    var flowType: String { get }
     var address: Address? { get }
     var hint: String? { get }
     var text: String? { get }
@@ -58,6 +64,7 @@ struct OrderRequest: eRpRemoteStorageOrder, AVSOrder, Equatable, Codable {
     let redeemType: RedeemOption
     let version: String
     let name: String?
+    let flowType: String
     let address: Address?
     let hint: String?
     let text: String?
@@ -75,6 +82,7 @@ struct OrderRequest: eRpRemoteStorageOrder, AVSOrder, Equatable, Codable {
         version: String = "2",
         redeemType: RedeemOption,
         name: String? = nil,
+        flowType: String,
         address: Address? = nil,
         hint: String? = nil,
         text: String? = nil,
@@ -91,6 +99,7 @@ struct OrderRequest: eRpRemoteStorageOrder, AVSOrder, Equatable, Codable {
         self.version = version
         self.redeemType = redeemType
         self.name = name
+        self.flowType = flowType
         self.address = address
         self.hint = hint
         self.text = text
@@ -109,6 +118,7 @@ struct OrderRequest: eRpRemoteStorageOrder, AVSOrder, Equatable, Codable {
         case version
         case redeemType
         case name
+        case flowType
         case address
         case hint
         case text
@@ -128,6 +138,7 @@ struct OrderRequest: eRpRemoteStorageOrder, AVSOrder, Equatable, Codable {
         version = try container.decode(String.self, forKey: .version)
         redeemType = try container.decode(RedeemOption.self, forKey: .redeemType)
         name = try container.decodeIfPresent(String.self, forKey: .name)
+        flowType = try container.decode(String.self, forKey: .flowType)
         address = try container.decodeIfPresent(Address.self, forKey: .address)
         hint = try container.decodeIfPresent(String.self, forKey: .hint)
         text = try container.decodeIfPresent(String.self, forKey: .text)
@@ -147,6 +158,7 @@ struct OrderRequest: eRpRemoteStorageOrder, AVSOrder, Equatable, Codable {
         try container.encode(version, forKey: .version)
         try container.encode(redeemType, forKey: .redeemType)
         try container.encodeIfPresent(name, forKey: .name)
+        try container.encode(flowType, forKey: .flowType)
         try container.encodeIfPresent(address, forKey: .address)
         try container.encodeIfPresent(hint, forKey: .hint)
         try container.encodeIfPresent(text, forKey: .text)
@@ -211,7 +223,8 @@ extension ErxTaskOrder {
             identifier: order.orderID.uuidString,
             erxTaskId: order.taskID,
             accessCode: order.accessCode,
-            pharmacyTelematikId: telematikId,
+            telematikId: telematikId,
+            flowType: order.flowType,
             payload: payload
         )
     }
@@ -271,6 +284,7 @@ extension ErxTask {
             orderID: orderId,
             redeemType: redeemOption,
             name: shipmentInfo?.name,
+            flowType: flowType.rawValue,
             address: Address(
                 street: shipmentInfo?.street,
                 detail: shipmentInfo?.addressDetail,

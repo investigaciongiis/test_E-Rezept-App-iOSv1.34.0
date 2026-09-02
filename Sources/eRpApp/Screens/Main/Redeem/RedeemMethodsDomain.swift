@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import CasePaths
@@ -27,7 +31,7 @@ import UIKit
 struct RedeemMethodsDomain {
     @ObservableState
     struct State: Equatable {
-        @Shared var prescriptions: [Prescription]
+        var prescriptions: [Prescription]
         @Presents var destination: Destination.State?
     }
 
@@ -37,11 +41,11 @@ struct RedeemMethodsDomain {
         case delegate(Delegate)
 
         case resetNavigation
-        case showMatrixCodeTapped
-        case showPharmacySearchTapped
+        case matrixCodeTapped
 
         enum Delegate: Equatable {
             case close
+            case redeemOverview([Prescription])
         }
     }
 
@@ -49,8 +53,6 @@ struct RedeemMethodsDomain {
     enum Destination {
         // sourcery: AnalyticsScreen = redeem_matrixCode
         case matrixCode(MatrixCodeDomain)
-        // sourcery: AnalyticsScreen = pharmacySearch
-        case pharmacySearch(PharmacySearchDomain)
     }
 
     @Dependency(\.schedulers) var schedulers: Schedulers
@@ -59,31 +61,14 @@ struct RedeemMethodsDomain {
         Reduce { state, action in
             switch action {
             case .closeButtonTapped:
-                return Effect.send(.delegate(.close))
-            case let .destination(.presented(.pharmacySearch(.delegate(action)))):
-                switch action {
-                case .close:
-                    state.destination = nil
-                    return .run { send in
-                        try await schedulers.main.sleep(for: 0.1)
-                        await send(.delegate(.close))
-                    }
-                }
-            case .showMatrixCodeTapped:
+                return .send(.delegate(.close))
+            case .matrixCodeTapped:
                 state.destination = .matrixCode(
                     MatrixCodeDomain.State(
                         type: .erxTask,
                         erxTasks: state.prescriptions.map(\.erxTask)
                     )
                 )
-                return .none
-            case .showPharmacySearchTapped:
-                state.destination = .pharmacySearch(PharmacySearchDomain
-                    .State(
-                        selectedPrescriptions: state.$prescriptions,
-                        inRedeemProcess: true,
-                        pharmacyRedeemState: Shared(nil)
-                    ))
                 return .none
             case .resetNavigation:
                 state.destination = nil
@@ -99,7 +84,7 @@ struct RedeemMethodsDomain {
 extension RedeemMethodsDomain {
     enum Dummies {
         static let state = State(
-            prescriptions: Shared([Prescription.Dummies.prescriptionReady])
+            prescriptions: [Prescription.Dummies.prescriptionReady]
         )
 
         static let store = Store(

@@ -9,8 +9,10 @@ import eRpKit
 import eRpLocalStorage
 import eRpRemoteStorage
 import Foundation
+import HTTPClient
 import IdentifiedCollections
 import IDP
+import IDPLive
 import OpenSSL
 import Pharmacy
 
@@ -530,6 +532,7 @@ class SmartMockErxTaskCoreDataStore: ErxTaskCoreDataStore, SmartMock {
         listAllChargeItemsRecordings = mocks?.listAllChargeItemsRecordings ?? .delegate
         saveChargeItemsRecordings = mocks?.saveChargeItemsRecordings ?? .delegate
         deleteChargeItemsRecordings = mocks?.deleteChargeItemsRecordings ?? .delegate
+        updateDiGaInfoRecordings = mocks?.updateDiGaInfoRecordings ?? .delegate
     }
 
     /// ErxLocalDataStore
@@ -931,6 +934,30 @@ class SmartMockErxTaskCoreDataStore: ErxTaskCoreDataStore, SmartMock {
         }
     }
 
+    var updateDiGaInfoRecordings: MockAnswer<Bool>
+
+    func update(diGaInfo: DiGaInfo) -> AnyPublisher<Bool, LocalStoreError> {
+        guard !isRecording else {
+            let result = wrapped.update(
+                    diGaInfo: diGaInfo
+            )
+                .handleEvents(receiveOutput: { [weak self] value in
+                    self?.updateDiGaInfoRecordings.record(value)
+                })
+                .eraseToAnyPublisher()
+            return result
+        }
+        if let value = updateDiGaInfoRecordings.next() {
+            return Just(value)
+                .setFailureType(to: LocalStoreError.self)
+                .eraseToAnyPublisher()
+        } else {
+            return wrapped.update(
+                    diGaInfo: diGaInfo
+            )
+        }
+    }
+
     struct Mocks: Codable {
         var fetchTaskByAccessCodeRecordings: MockAnswer<ErxTask?>? = .delegate
         var listAllTasksRecordings: MockAnswer<[ErxTask]>? = .delegate
@@ -949,6 +976,7 @@ class SmartMockErxTaskCoreDataStore: ErxTaskCoreDataStore, SmartMock {
         var listAllChargeItemsRecordings: MockAnswer<[ErxSparseChargeItem]>? = .delegate
         var saveChargeItemsRecordings: MockAnswer<Bool>? = .delegate
         var deleteChargeItemsRecordings: MockAnswer<Bool>? = .delegate
+        var updateDiGaInfoRecordings: MockAnswer<Bool>? = .delegate
     }
     func recordedData() throws -> CodableMock {
         return try CodableMock(
@@ -970,7 +998,8 @@ class SmartMockErxTaskCoreDataStore: ErxTaskCoreDataStore, SmartMock {
                 fetchLatestTimestampForChargeItemsRecordings: fetchLatestTimestampForChargeItemsRecordings,
                 listAllChargeItemsRecordings: listAllChargeItemsRecordings,
                 saveChargeItemsRecordings: saveChargeItemsRecordings,
-                deleteChargeItemsRecordings: deleteChargeItemsRecordings
+                deleteChargeItemsRecordings: deleteChargeItemsRecordings,
+                updateDiGaInfoRecordings: updateDiGaInfoRecordings
             )
         )
     }
@@ -1316,7 +1345,6 @@ class SmartMockIDPSession: IDPSession, SmartMock {
 
 
 
-
     struct Mocks: Codable {
         var requestChallengeRecordings: MockAnswer<IDPChallengeSession>? = .delegate
         var verifyRecordings: MockAnswer<IDPExchangeToken>? = .delegate
@@ -1369,11 +1397,14 @@ class SmartMockPharmacyRemoteDataStore: PharmacyRemoteDataStore, SmartMock {
         searchPharmaciesByPositionFilterRecordings = mocks?.searchPharmaciesByPositionFilterRecordings ?? .delegate
         fetchPharmacyByRecordings = mocks?.fetchPharmacyByRecordings ?? .delegate
         loadAvsCertificatesForRecordings = mocks?.loadAvsCertificatesForRecordings ?? .delegate
+        apiFiltersForRecordings = mocks?.apiFiltersForRecordings ?? .delegate
+        fetchInsuranceByRecordings = mocks?.fetchInsuranceByRecordings ?? .delegate
+        fetchAllInsurancesRecordings = mocks?.fetchAllInsurancesRecordings ?? .delegate
     }
 
     var searchPharmaciesByPositionFilterRecordings: MockAnswer<[PharmacyLocation]>
 
-    func searchPharmacies(by searchTerm: String, position: Position?, filter: [String: String]) -> AnyPublisher<[PharmacyLocation], PharmacyFHIRDataSource.Error> {
+    func searchPharmacies(by searchTerm: String, position: Position?, filter: [PharmacyRemoteDataStoreFilter]) -> AnyPublisher<[PharmacyLocation], PharmacyFHIRDataSource.Error> {
         guard !isRecording else {
             let result = wrapped.searchPharmacies(
                     by: searchTerm,
@@ -1447,10 +1478,78 @@ class SmartMockPharmacyRemoteDataStore: PharmacyRemoteDataStore, SmartMock {
         }
     }
 
+    var apiFiltersForRecordings: MockAnswer<[PharmacyRemoteDataStoreFilter]>
+
+    func apiFilters(for filter: [PharmacyRepositoryFilter]) -> [PharmacyRemoteDataStoreFilter] {
+        guard !isRecording else {
+            let result = wrapped.apiFilters(
+                    for: filter
+            )
+            apiFiltersForRecordings.record(result)
+            return result
+        }
+        if let value = apiFiltersForRecordings.next() {
+            return value // [PharmacyRemoteDataStoreFilter]
+        } else {
+            return wrapped.apiFilters(
+                    for: filter
+            )
+        }
+    }
+
+    var fetchInsuranceByRecordings: MockAnswer<Insurance?>
+
+    func fetchInsurance(by ikNumber: String) -> AnyPublisher<Insurance?, PharmacyFHIRDataSource.Error> {
+        guard !isRecording else {
+            let result = wrapped.fetchInsurance(
+                    by: ikNumber
+            )
+                .handleEvents(receiveOutput: { [weak self] value in
+                    self?.fetchInsuranceByRecordings.record(value)
+                })
+                .eraseToAnyPublisher()
+            return result
+        }
+        if let value = fetchInsuranceByRecordings.next() {
+            return Just(value)
+                .setFailureType(to: PharmacyFHIRDataSource.Error.self)
+                .eraseToAnyPublisher()
+        } else {
+            return wrapped.fetchInsurance(
+                    by: ikNumber
+            )
+        }
+    }
+
+    var fetchAllInsurancesRecordings: MockAnswer<[Insurance]>
+
+    func fetchAllInsurances() -> AnyPublisher<[Insurance], PharmacyFHIRDataSource.Error> {
+        guard !isRecording else {
+            let result = wrapped.fetchAllInsurances(
+            )
+                .handleEvents(receiveOutput: { [weak self] value in
+                    self?.fetchAllInsurancesRecordings.record(value)
+                })
+                .eraseToAnyPublisher()
+            return result
+        }
+        if let value = fetchAllInsurancesRecordings.next() {
+            return Just(value)
+                .setFailureType(to: PharmacyFHIRDataSource.Error.self)
+                .eraseToAnyPublisher()
+        } else {
+            return wrapped.fetchAllInsurances(
+            )
+        }
+    }
+
     struct Mocks: Codable {
         var searchPharmaciesByPositionFilterRecordings: MockAnswer<[PharmacyLocation]>? = .delegate
         var fetchPharmacyByRecordings: MockAnswer<PharmacyLocation?>? = .delegate
         var loadAvsCertificatesForRecordings: MockAnswer<[SerializableX509]>? = .delegate
+        var apiFiltersForRecordings: MockAnswer<[PharmacyRemoteDataStoreFilter]>? = .delegate
+        var fetchInsuranceByRecordings: MockAnswer<Insurance?>? = .delegate
+        var fetchAllInsurancesRecordings: MockAnswer<[Insurance]>? = .delegate
     }
     func recordedData() throws -> CodableMock {
         return try CodableMock(
@@ -1458,7 +1557,10 @@ class SmartMockPharmacyRemoteDataStore: PharmacyRemoteDataStore, SmartMock {
             Mocks(
                 searchPharmaciesByPositionFilterRecordings: searchPharmaciesByPositionFilterRecordings,
                 fetchPharmacyByRecordings: fetchPharmacyByRecordings,
-                loadAvsCertificatesForRecordings: loadAvsCertificatesForRecordings
+                loadAvsCertificatesForRecordings: loadAvsCertificatesForRecordings,
+                apiFiltersForRecordings: apiFiltersForRecordings,
+                fetchInsuranceByRecordings: fetchInsuranceByRecordings,
+                fetchAllInsurancesRecordings: fetchAllInsurancesRecordings
             )
         )
     }
@@ -1476,6 +1578,7 @@ class SmartMockRedeemService: RedeemService, SmartMock {
         self.isRecording = isRecording
 
         redeemRecordings = mocks?.redeemRecordings ?? .delegate
+        redeemDiGaRecordings = mocks?.redeemDiGaRecordings ?? .delegate
     }
 
     var redeemRecordings: MockAnswer<IdentifiedArrayOf<OrderResponse>>
@@ -1502,14 +1605,40 @@ class SmartMockRedeemService: RedeemService, SmartMock {
         }
     }
 
+    var redeemDiGaRecordings: MockAnswer<IdentifiedArrayOf<OrderDiGaResponse>>
+
+    func redeemDiGa(_ orders: [OrderDiGaRequest]) -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError> {
+        guard !isRecording else {
+            let result = wrapped.redeemDiGa(
+                    orders
+            )
+                .handleEvents(receiveOutput: { [weak self] value in
+                    self?.redeemDiGaRecordings.record(value)
+                })
+                .eraseToAnyPublisher()
+            return result
+        }
+        if let value = redeemDiGaRecordings.next() {
+            return Just(value)
+                .setFailureType(to: RedeemServiceError.self)
+                .eraseToAnyPublisher()
+        } else {
+            return wrapped.redeemDiGa(
+                    orders
+            )
+        }
+    }
+
     struct Mocks: Codable {
         var redeemRecordings: MockAnswer<IdentifiedArrayOf<OrderResponse>>? = .delegate
+        var redeemDiGaRecordings: MockAnswer<IdentifiedArrayOf<OrderDiGaResponse>>? = .delegate
     }
     func recordedData() throws -> CodableMock {
         return try CodableMock(
             "RedeemService",
             Mocks(
-                redeemRecordings: redeemRecordings
+                redeemRecordings: redeemRecordings,
+                redeemDiGaRecordings: redeemDiGaRecordings
             )
         )
     }
@@ -1539,7 +1668,6 @@ class SmartMockUserDataStore: UserDataStore, SmartMock {
         selectedProfileIdRecordings = mocks?.selectedProfileIdRecordings ?? .delegate
         latestCompatibleModelVersionRecordings = mocks?.latestCompatibleModelVersionRecordings ?? .delegate
         appStartCounterRecordings = mocks?.appStartCounterRecordings ?? .delegate
-        hideWelcomeDrawerRecordings = mocks?.hideWelcomeDrawerRecordings ?? .delegate
         readInternalCommunicationsRecordings = mocks?.readInternalCommunicationsRecordings ?? .delegate
         hideWelcomeMessageRecordings = mocks?.hideWelcomeMessageRecordings ?? .delegate
     }
@@ -1770,26 +1898,6 @@ class SmartMockUserDataStore: UserDataStore, SmartMock {
             return wrapped.appStartCounter
         }
     }
-    var hideWelcomeDrawerRecordings: MockAnswer<Bool>
-    var hideWelcomeDrawer: Bool {
-        set {
-            if isRecording {
-                hideWelcomeDrawerRecordings.record(newValue)
-            }
-            wrapped.hideWelcomeDrawer = newValue }
-        get {
-            guard !isRecording else {
-                let result = wrapped.hideWelcomeDrawer
-                hideWelcomeDrawerRecordings.record(result)
-                return result
-            }
-
-            if let first = hideWelcomeDrawerRecordings.next() {
-                return first
-            }
-            return wrapped.hideWelcomeDrawer
-        }
-    }
     var readInternalCommunicationsRecordings: MockAnswer<[String]>
 
     var readInternalCommunications: AnyPublisher<[String], Never> {
@@ -1912,7 +2020,6 @@ class SmartMockUserDataStore: UserDataStore, SmartMock {
         var selectedProfileIdRecordings: MockAnswer<UUID?>? = .delegate
         var latestCompatibleModelVersionRecordings: MockAnswer<ModelVersion>? = .delegate
         var appStartCounterRecordings: MockAnswer<Int>? = .delegate
-        var hideWelcomeDrawerRecordings: MockAnswer<Bool>? = .delegate
         var readInternalCommunicationsRecordings: MockAnswer<[String]>? = .delegate
         var hideWelcomeMessageRecordings: MockAnswer<Bool>? = .delegate
     }
@@ -1933,7 +2040,6 @@ class SmartMockUserDataStore: UserDataStore, SmartMock {
                 selectedProfileIdRecordings:selectedProfileIdRecordings,
                 latestCompatibleModelVersionRecordings: latestCompatibleModelVersionRecordings,
                 appStartCounterRecordings: appStartCounterRecordings,
-                hideWelcomeDrawerRecordings: hideWelcomeDrawerRecordings,
                 readInternalCommunicationsRecordings:readInternalCommunicationsRecordings,
                 hideWelcomeMessageRecordings:hideWelcomeMessageRecordings
             )

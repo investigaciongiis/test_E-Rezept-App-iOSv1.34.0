@@ -1,105 +1,106 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
-import AVKit
 import Combine
 import ComposableArchitecture
 import eRpStyleKit
 import SwiftUI
 
 struct CardWallReadCardView: View {
-    @Perception.Bindable var store: StoreOf<CardWallReadCardDomain>
+    @Bindable var store: StoreOf<CardWallReadCardDomain>
 
     var body: some View {
-        WithPerceptionTracking {
-            VStack(spacing: 0) {
-                ScrollView {
-                    Text(L10n.cdwTxtRcCta)
-                        .font(.title3.bold())
-                        .multilineTextAlignment(.center)
-                        .padding(.bottom, 8)
-                        .padding(.top, 48)
-                        .padding(.horizontal)
+        VStack(spacing: 0) {
+            ScrollView {
+                Text(L10n.cdwTxtRcCta)
+                    .font(.title3.bold())
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 8)
+                    .padding(.top, 48)
+                    .padding(.horizontal)
 
-                    Text(L10n.cdwTxtRcSubheadline)
-                        .font(.subheadline)
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(Color(.secondaryLabel))
-                        .padding(.horizontal)
-                        .padding(.bottom, 32)
+                Text(L10n.cdwTxtRcSubheadline)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(Color(.secondaryLabel))
+                    .padding(.horizontal)
+                    .padding(.bottom, 32)
 
-                    NFCPhoneView()
-                }
-                .padding(.horizontal)
+                NFCPhoneView()
+            }
+            .padding(.horizontal)
 
-                Spacer()
+            Spacer()
 
-                GreyDivider()
+            GreyDivider()
 
-                Button {
-                    store.send(store.output.nextAction)
-                } label: {
-                    Label {
-                        Text(store.output.buttonTitle, bundle: .module)
-                    } icon: {
-                        if !store.output.nextButtonEnabled {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        }
+            Button {
+                store.send(store.output.nextAction)
+            } label: {
+                Label {
+                    Text(store.output.buttonTitle, bundle: .module)
+                } icon: {
+                    if !store.output.nextButtonEnabled {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
                     }
                 }
-                .buttonStyle(.primary(isEnabled: store.output.nextButtonEnabled))
-                .accessibility(identifier: A11y.cardWall.readCard.cdwBtnRcNext)
-                .accessibility(hint: Text(L10n.cdwBtnRcNextHint))
-                .padding(.vertical)
             }
-            .demoBanner(isPresented: store.isDemoModus) {
-                Text(L10n.cdwTxtRcDemoModeInfo)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        store.send(.openHelpView)
-                    }, label: {
-                        HStack(alignment: .center) {
-                            Image(systemName: SFSymbolName.questionmarkCircle)
-                            Text(L10n.cdwBtnRcHelp)
-                        }
-                        .foregroundColor(Colors.textSecondary)
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 16)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(8)
-                    })
-                        .fullScreenCover(item: $store
-                            .scope(state: \.destination?.help, action: \.destination.help)) { store in
-                                NavigationStack {
-                                    ReadCardHelpView(store: store)
-                                }
-                                .accentColor(Colors.primary700)
-                                .navigationViewStyle(StackNavigationViewStyle())
-                        }
-                }
-            }
-            .alert($store.scope(state: \.destination?.alert?.alert, action: \.destination.alert))
-            .keyboardShortcut(.defaultAction) // workaround: this makes the alert's primary button bold
+            .buttonStyle(.primary(isEnabled: store.output.nextButtonEnabled, width: .wideHugging))
+            .accessibility(identifier: A11y.cardWall.readCard.cdwBtnRcNext)
+            .accessibility(hint: Text(L10n.cdwBtnRcNextHint))
+            .padding(.vertical, 8)
         }
+        .demoBanner(isPresented: store.isDemoModus) {
+            Text(L10n.cdwTxtRcDemoModeInfo)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(action: {
+                    store.send(.openHelpView)
+                }, label: {
+                    HStack(alignment: .center) {
+                        Image(systemName: SFSymbolName.questionmarkCircle)
+                        Text(L10n.cdwBtnRcHelp)
+                    }
+                    .foregroundColor(Colors.textSecondary)
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 16)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                })
+                    .fullScreenCover(item: $store
+                        .scope(state: \.destination?.help, action: \.destination.help)) { store in
+                            NavigationStack {
+                                ReadCardHelpView(store: store)
+                            }
+                            .tint(Colors.primary700)
+                            .navigationViewStyle(StackNavigationViewStyle())
+                    }
+            }
+        }
+        .alert($store.scope(state: \.destination?.alert?.alert, action: \.destination.alert))
+        .keyboardShortcut(.defaultAction) // workaround: this makes the alert's primary button bold
         .statusBar(hidden: true)
     }
 
@@ -132,6 +133,7 @@ struct CardWallReadCardView: View {
                     .aspectRatio(contentMode: .fit)
                     .padding(.top, 50)
                     .padding(.trailing, 35)
+                    .accessibilityLabel(L10n.cdwTxtRcImageLabel)
             }
         }
     }
@@ -153,6 +155,5 @@ struct CardWallReadCardView_Previews: PreviewProvider {
                 store: CardWallReadCardDomain.Dummies.store
             )
         }
-        .previewDevice("iPhone 11")
     }
 }

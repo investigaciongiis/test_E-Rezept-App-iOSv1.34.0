@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -45,6 +49,21 @@ struct EditProfileDomain {
         @Presents var destination: Destination.State?
         var insuranceType: Profile.InsuranceType
         var routeToChargeItemList = false
+        var showCopySuccessInfo = false
+        var insuranceName: String {
+            if let insurance, !insurance.isEmpty {
+                return insurance
+            } else {
+                switch insuranceType {
+                case .gKV:
+                    return L10n.stgTxtEditProfileLabelGkvInsurance.text
+                case .pKV:
+                    return L10n.stgTxtEditProfileLabelPkvInsurance.text
+                case .unknown:
+                    return L10n.stgTxtEditProfileLabelUnknownInsurance.text
+                }
+            }
+        }
 
         init(name: String,
              acronym: String,
@@ -108,6 +127,8 @@ struct EditProfileDomain {
         case registeredDevices(RegisteredDevicesDomain)
         // sourcery: AnalyticsScreen = chargeItemList
         case chargeItemList(ChargeItemListDomain)
+        // sourcery: AnalyticsScreen = profile_insuranceDrawer
+        case insuranceDrawer
         case editProfilePicture(EditProfilePictureDomain)
 
         enum Alert: Equatable {
@@ -121,6 +142,11 @@ struct EditProfileDomain {
         case onAppear
         case binding(BindingAction<State>)
         case showDeleteProfileAlert
+        case changeInsurance
+        case copyKVNR(String)
+        case copyCompleted
+        case setUserToGKVInsured
+        case setUserToPKVInsured
         case login
         case relogin
         case showDeleteBiometricPairingAlert
@@ -152,10 +178,18 @@ struct EditProfileDomain {
     @Dependency(\.appSecurityManager) var appSecurityManager: AppSecurityManager
     @Dependency(\.schedulers) var schedulers: Schedulers
     @Dependency(\.profileDataStore) var profileDataStore: ProfileDataStore
-    @Dependency(\.userDataStore) var userDataStore: UserDataStore
+
+    // Use changebaleUserSesisonContainer to set the correct user session for demo mode
+    var userDataStore: UserDataStore {
+        changeableUserSessionContainer.userSession.localUserStore
+    }
+
+    @Dependency(\.changeableUserSessionContainer) var changeableUserSessionContainer
     @Dependency(\.profileSecureDataWiper) var profileSecureDataWiper: ProfileSecureDataWiper
     @Dependency(\.userSessionProvider) var userSessionProvider: UserSessionProvider
     @Dependency(\.router) var router: Routing
+    @Dependency(\.pasteboardService) var pasteboardService: PasteboardService
+    @Dependency(\.feedbackReceiver) var feedbackReceiver: FeedbackReceiver
 
     var body: some Reducer<State, Action> {
         BindingReducer()
@@ -242,6 +276,27 @@ struct EditProfileDomain {
                 .map(Action.response)
                 .eraseToAnyPublisher
             )
+        case let .copyKVNR(kvnr):
+            pasteboardService.copy(kvnr)
+            feedbackReceiver.hapticFeedbackSuccess()
+            state.showCopySuccessInfo = true
+            return .run { send in
+                // wait for 3 second to set showCopySuccessInfo to false
+                try await schedulers.main.sleep(for: 3)
+                await send(.copyCompleted)
+            }
+        case .copyCompleted:
+            state.showCopySuccessInfo = false
+            return .none
+        case .changeInsurance:
+            state.destination = .insuranceDrawer
+            return .none
+        case .setUserToGKVInsured:
+            state.insuranceType = .gKV
+            return changeInsurance(for: .gKV, with: state.profileId)
+        case .setUserToPKVInsured:
+            state.insuranceType = .pKV
+            return changeInsurance(for: .pKV, with: state.profileId)
         case .showDeleteProfileAlert:
             state.destination = .alert(AlertStates.deleteProfile)
             return .none
@@ -366,6 +421,23 @@ extension EditProfileDomain {
                 .map(Action.Response.biometricKeyIDReceived)
                 .map(Action.response)
                 .eraseToAnyPublisher
+        )
+    }
+
+    func changeInsurance(for type: Profile.InsuranceType, with profileId: UUID) -> Effect<Action> {
+        .concatenate(
+            .publisher(
+                updateProfile(with: profileId) { profile in
+                    profile.insuranceType = type
+                    profile.insurance = nil
+                    profile.insuranceId = nil
+                    profile.insuranceIK = nil
+                }
+                .map(Action.Response.updateProfileReceived)
+                .map(Action.response)
+                .eraseToAnyPublisher
+            ),
+            .send(.relogin)
         )
     }
 

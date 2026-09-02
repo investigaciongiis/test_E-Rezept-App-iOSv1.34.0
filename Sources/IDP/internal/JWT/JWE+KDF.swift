@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -28,9 +32,10 @@ extension JWE {
         let ephemeralPublicKey: JWK
     }
 
-    enum Algorithm {
-        // swiftlint:disable:next identifier_name
-        case ecdh_es(KeyExchangeContext)
+    /// JWE Algorithm for key exchange and encryption
+    public enum Algorithm {
+        /// ECDH-ES algorithm with specified key exchange context
+        case ecdh_es(KeyExchangeContext) // swiftlint:disable:this identifier_name
 
         func encryptionContext() throws -> EncryptionContext {
             switch self {
@@ -39,9 +44,11 @@ extension JWE {
             }
         }
 
-        enum KeyExchangeContext {
+        /// Key exchange context for different cryptographic curves
+        public enum KeyExchangeContext {
             // [REQ:gemSpec_Krypt:GS-A_4357] Key pair generation delegated to OpenSSL with BrainpoolP256r1 parameters
             // [REQ:gemSpec_Krypt:GS-A_4367] Key pair generation delegated to OpenSSL with BrainpoolP256r1 parameters
+            /// BrainpoolP256r1 key exchange context
             case bpp256r1(BrainpoolP256r1.KeyExchange.PublicKey,
                           keyPairGenerator: () throws -> BrainpoolP256r1.KeyExchange.PrivateKey
                               // [REQ:BSI-eRp-ePA:O.Cryp_3#4] Brainpool key generator
@@ -78,6 +85,7 @@ extension JWE {
 }
 
 extension JWE {
+    /// Decryption algorithm for JWE
     enum DecryptionAlgorithm {
         case plain(SymmetricKey)
     }

@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -160,12 +164,11 @@ final class OrderDetailDomainTests: XCTestCase {
         await store.receive(.response(.loadAndShowPharmacyReceived(.success(remotePharmacy)))) { state in
             state.order = Order.lens.pharmacy.set(remotePharmacy)(order)
             state.destination = .pharmacyDetail(.init(
-                prescriptions: Shared([]),
-                selectedPrescriptions: Shared([]),
+                prescriptions: Shared(value: []),
+                selectedPrescriptions: Shared(value: []),
                 inRedeemProcess: false,
                 inOrdersMessage: true,
-                pharmacyViewModel: .init(pharmacy: remotePharmacy),
-                pharmacyRedeemState: Shared(nil)
+                pharmacyViewModel: .init(pharmacy: remotePharmacy)
             ))
         }
     }
@@ -179,7 +182,8 @@ final class OrderDetailDomainTests: XCTestCase {
             for: order,
             resourceHandler: mockApplication
         )
-        mockPharmacyRepository.updateFromRemoteByReturnValue = Fail(error: PharmacyRepositoryError.remote(.notFound))
+        mockPharmacyRepository
+            .updateFromRemoteByReturnValue = Fail(error: PharmacyRepositoryError.remote(.notFound))
             .eraseToAnyPublisher()
         mockPharmacyRepository.deletePharmaciesReturnValue = Just(true)
             .setFailureType(to: PharmacyRepositoryError.self)
@@ -368,6 +372,102 @@ final class OrderDetailDomainTests: XCTestCase {
         expect(self.mockUserDataStore.markInternalCommunicationAsReadMessageIdCalled).to(beTrue())
         expect(self.mockUserDataStore.markInternalCommunicationAsReadMessageIdCallsCount) == 1
     }
+
+    func testChipTextUpdateSoloDispReq() async {
+        let orderId = "12343-1236-432"
+        let communication = ErxTask.Communication.Fixtures.communicationDispReq2ComputedDate
+        let input = IdentifiedArrayOf(uniqueElements: [communication])
+        let tasks = ErxTask.Fixtures.erxTask17
+        let expectedTimelineEntire: [TimelineEntry] = [.dispReq(OrderDetailDomainTests.communicationDispReq1Unique,
+                                                                pharmacy: nil,
+                                                                chipTexts: ["Vita-Tee"])]
+
+        let store = testStore(
+            for: .init(orderId: orderId, communications: input, chargeItems: []),
+            resourceHandler: mockApplication
+        )
+
+        await store.send(.tasksReceived([tasks])) {
+            $0.erxTasks = IdentifiedArrayOf(uniqueElements: [tasks].sorted())
+            $0.timelineEntries = expectedTimelineEntire
+        }
+    }
+
+    func testChipTextUpdateMultiDispReq() async {
+        let orderId = "12343-1236-432"
+        let communication = [ErxTask.Communication.Fixtures.communicationDispReq2ComputedDate,
+                             ErxTask.Communication.Fixtures.communicationDispReqYesterDay]
+        let input = IdentifiedArrayOf(uniqueElements: communication)
+        let tasks = [ErxTask.Fixtures.erxTask17, ErxTask.Fixtures.erxTask18]
+        let expectedTimelineEntire: [TimelineEntry] = [.dispReq(OrderDetailDomainTests.communicationDispReq2Unique,
+                                                                pharmacy: nil,
+                                                                chipTexts: [L10n.ordDetailTxtChipAll.text])]
+        let store = testStore(
+            for: .init(orderId: orderId, communications: input, chargeItems: []),
+            resourceHandler: mockApplication
+        )
+
+        await store.send(.tasksReceived(tasks)) {
+            $0.erxTasks = IdentifiedArrayOf(uniqueElements: tasks.sorted())
+            $0.timelineEntries = expectedTimelineEntire
+        }
+    }
+
+    func testChipTextUpdateSoloReply() async {
+        let orderId = "12343-1236-432"
+        let communication = ErxTask.Communication.Fixtures.communicationReply2ComputedDate
+        let input = IdentifiedArrayOf(uniqueElements: [communication])
+        let tasks = ErxTask.Fixtures.erxTask15
+        let expectedTimelineEntire: [TimelineEntry] = [.reply(OrderDetailDomainTests.communicationReply1Unique,
+                                                              chipTexts: ["Vita-Tee"])]
+
+        let store = testStore(
+            for: .init(orderId: orderId, communications: input, chargeItems: []),
+            resourceHandler: mockApplication
+        )
+
+        await store.send(.tasksReceived([tasks])) {
+            $0.erxTasks = IdentifiedArrayOf(uniqueElements: [tasks].sorted())
+            $0.timelineEntries = expectedTimelineEntire
+        }
+    }
+
+    func testChipTextUpdateMultiReply() async {
+        let orderId = "12343-1236-432"
+        let communication = [ErxTask.Communication.Fixtures.communicationReply2ComputedDate,
+                             ErxTask.Communication.Fixtures.communicationReplyYesterDay]
+        let input = IdentifiedArrayOf(uniqueElements: communication)
+        let tasks = [ErxTask.Fixtures.erxTask15, ErxTask.Fixtures.erxTask16]
+        let expectedTimelineEntire: [TimelineEntry] = [.reply(OrderDetailDomainTests.communicationReply2Unique,
+                                                              chipTexts: [L10n.ordDetailTxtChipAll.text])]
+        let store = testStore(
+            for: .init(orderId: orderId, communications: input, chargeItems: []),
+            resourceHandler: mockApplication
+        )
+
+        await store.send(.tasksReceived(tasks)) {
+            $0.erxTasks = IdentifiedArrayOf(uniqueElements: tasks.sorted())
+            $0.timelineEntries = expectedTimelineEntire
+        }
+    }
+
+    func testChipTextUpdateMultiSoloReply() async {
+        let orderId = "12343-1236-432"
+        let communication = ErxTask.Communication.Fixtures.communicationReply2ComputedDate
+        let input = IdentifiedArrayOf(uniqueElements: [communication])
+        let tasks = [ErxTask.Fixtures.erxTask15, ErxTask.Demo.erxTask2]
+        let expectedTimelineEntire: [TimelineEntry] = [.reply(OrderDetailDomainTests.communicationReply1Unique,
+                                                              chipTexts: ["Vita-Tee"])]
+        let store = testStore(
+            for: .init(orderId: orderId, communications: input, chargeItems: []),
+            resourceHandler: mockApplication
+        )
+
+        await store.send(.tasksReceived(tasks)) {
+            $0.erxTasks = IdentifiedArrayOf(uniqueElements: tasks.sorted())
+            $0.timelineEntries = expectedTimelineEntire
+        }
+    }
 }
 
 extension OrderDetailDomainTests {
@@ -387,6 +487,7 @@ extension OrderDetailDomainTests {
         taskId: "taskID",
         userId: "userID",
         telematikId: "telematikID",
+        orderId: "12343-1236-432",
         timestamp: "2021-05-28T10:59:37.098245933+00:00",
         payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"shipment\",\"info_text\": \"Checkout your shimpment in the shopping cart.\",\"url\": \"https://www.das-e-rezept-fuer-deutschland.de\"}"
         // swiftlint:disable:previous line_length
@@ -477,5 +578,53 @@ extension OrderDetailDomainTests {
                 closingTime: "18:00:00"
             ),
         ]
+    )
+
+    static let communicationReply1Unique: ErxTask.Communication.Unique = .init(
+        identifier: "disp_reply_1",
+        profile: .reply,
+        taskIds: ["53210f983-1e67-22c5-8955-63bf44e44fb8"],
+        insuranceId: "user_id_1",
+        telematikId: "12345.1",
+        orderId: "order_id_1",
+        timestamp: "2021-05-28T10:59:37.098245933+00:00",
+        payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+        isRead: true
+    )
+
+    static let communicationReply2Unique: ErxTask.Communication.Unique = .init(
+        identifier: "disp_reply_2",
+        profile: .reply,
+        taskIds: ["34235f983-1e67-22c5-8955-63bf44e44fb8", "53210f983-1e67-22c5-8955-63bf44e44fb8"],
+        insuranceId: "user_id_1",
+        telematikId: "12345.1",
+        orderId: "order_id_1",
+        timestamp: "2021-05-28T10:59:37.098245933+00:00",
+        payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+        isRead: true
+    )
+
+    static let communicationDispReq1Unique: ErxTask.Communication.Unique = .init(
+        identifier: "disp_req_1",
+        profile: .dispReq,
+        taskIds: ["53210f983-1e67-22c5-8955-63bf44e44fb8"],
+        insuranceId: "user_id_1",
+        telematikId: "12345.1",
+        orderId: "order_id_1",
+        timestamp: "2021-05-28T10:59:37.098245933+00:00",
+        payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+        isRead: true
+    )
+
+    static let communicationDispReq2Unique: ErxTask.Communication.Unique = .init(
+        identifier: "disp_req_2",
+        profile: .dispReq,
+        taskIds: ["34235f983-1e67-22c5-8955-63bf44e44fb8", "53210f983-1e67-22c5-8955-63bf44e44fb8"],
+        insuranceId: "user_id_1",
+        telematikId: "12345.1",
+        orderId: "order_id_1",
+        timestamp: "2021-05-28T10:59:37.098245933+00:00",
+        payloadJSON: "{\"version\": \"1\",\"supplyOptionsType\": \"onPremise\",\"info_text\": \"Hello\"}",
+        isRead: true
     )
 }

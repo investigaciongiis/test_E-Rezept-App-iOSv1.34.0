@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -45,7 +49,7 @@ public class DefaultTrustStoreSession {
         serverURL: URL,
         trustAnchor: TrustAnchor,
         trustStoreStorage: TrustStoreStorage,
-        httpClient: HTTPClient = DefaultHTTPClient(urlSessionConfiguration: .ephemeral)
+        httpClient: HTTPClient
     ) {
         self.init(
             serverURL: serverURL,
@@ -101,6 +105,11 @@ extension DefaultTrustStoreSession: TrustStoreSession {
                 trustStore.containsEECert(certificate)
             }
             .eraseToAnyPublisher()
+    }
+
+    public func vauCertificate() async throws -> X509 {
+        let trustStore = try await loadOcspCheckedTrustStore()
+        return trustStore.vauCert
     }
 }
 
@@ -244,17 +253,151 @@ extension DefaultTrustStoreSession {
             }
             .eraseToAnyPublisher()
     }
+
+    // swiftlint:disable:next function_body_length
+    func loadOcspCheckedTrustStore() async throws -> X509TrustStore {
+        // Case1: TrustStore certificate data is locally available (OSCPResponse may be requested from remote)
+        //        and validates successfully
+        if
+            let localPkiCertificates = trustStoreStorage.getPKICertificates(),
+            let localVauCertData = trustStoreStorage.getVauCertificate(),
+            let vauCert = try? X509(der: localVauCertData),
+            let vauCertIssuerCN = try? vauCert.issuerCn(),
+            let vauCertSerialNr = try? vauCert.serialNumber(),
+            let ocspUncheckedTrustStore = try? X509TrustStore(
+                trustAnchor: trustAnchor,
+                pkiCertificates: localPkiCertificates,
+                vauCertData: localVauCertData
+            ) {
+            let vauCertOCSPResponse = try await loadCurrentVauCertificateOcspResponse(
+                issuerCn: vauCertIssuerCN,
+                serialNr: vauCertSerialNr
+            )
+
+            // [REQ:gemSpec_Krypt:A_25060#1] OCSPResponse must be validated by current TrustStore ("Kategorie (B)")
+            // [REQ:gemSpec_Krypt:A_25061] Check VAU Certificate ("Kategorie (C)") with OCSPResponse
+            if let ocspValid = try? ocspUncheckedTrustStore.checkEeCertificatesStatus(with: [vauCertOCSPResponse]),
+               ocspValid {
+                return ocspUncheckedTrustStore
+            }
+        }
+
+        // Case2: TrustStore not locally available
+        //      OR validation of VAU certificate has failed
+        // --> load all data from remote and build a new TrustStore from it
+
+        // [REQ:gemSpec_Krypt:A_25058] Initial TrustStore creation
+        // [REQ:gemSpec_Krypt:A_25063] Re-init TrustStore if certificate validation has failed, then validate it again
+        // Reset all locally saved data
+        reset()
+
+        let rootSubjectCn = try trustAnchor.certificate.subjectCN()
+        let remotePkiCertificates = try await trustStoreClient
+            .loadPKICertificatesFromServer(rootSubjectCn: rootSubjectCn)
+        let remoteVauCertData = try await trustStoreClient.loadVauCertificateFromServer()
+
+        guard
+            let vauCert = try? X509(der: remoteVauCertData),
+            let vauCertIssuerCN = try? vauCert.issuerCn(),
+            let vauCertSerialNr = try? vauCert.serialNumber()
+        else {
+            throw TrustStoreError.internal(error: .vauCertificateUnexpectedFormat)
+        }
+        guard let ocspUncheckedTrustStore = try? X509TrustStore(
+            trustAnchor: trustAnchor,
+            pkiCertificates: remotePkiCertificates,
+            vauCertData: remoteVauCertData
+        )
+        else {
+            throw TrustStoreError.internal(error: .trustAnchorUnexpectedFormat)
+        }
+        let vauCertOCSPResponse = try await loadGracePeriodCheckedOcspResponseFromServer(
+            issuerCn: vauCertIssuerCN,
+            serialNr: vauCertSerialNr
+        )
+
+        // [REQ:gemSpec_Krypt:A_25060#2] OCSPResponse must be validated by current TrustStore ("Kategorie (B)")
+        // [REQ:gemSpec_Krypt:A_25061] Check VAU Certificate ("Kategorie (C)") with OCSPResponse
+        guard let ocspValid = try? ocspUncheckedTrustStore.checkEeCertificatesStatus(with: [vauCertOCSPResponse]),
+              ocspValid
+        else {
+            throw TrustStoreError.noValidVauCertificateAvailable
+        }
+        trustStoreStorage.set(pkiCertificates: remotePkiCertificates)
+        trustStoreStorage.set(vauCertificate: remoteVauCertData)
+
+        return ocspUncheckedTrustStore
+    }
+
+    // [REQ:gemSpec_Krypt:A_21216#1] Obtain OCSPResponse for VAU certificate from Fachdienst
+    /// Load the OCSP Response for the VAU encryption certificate
+    ///
+    /// - Parameters:
+    ///  - issuerCn: Common name (CN) of the issuer of the certificate the OCSP response is requested for
+    ///  - serialNr: Serial number (a positive integer) of the certificate the OCSP response is requested for
+    /// - Note: Thrown errors are of type `TrustStoreError`
+    /// - Returns: OCSPResponse
+    func loadCurrentVauCertificateOcspResponse(
+        issuerCn: String,
+        serialNr: String
+    ) async throws -> OCSPResponse {
+        let localVauCertOcspResponse = trustStoreStorage.getVauCertificateOcspResponse()
+        if
+            let localVauCertOcspResponse,
+            let localVauCertOcspResponseBase64 = String(data: localVauCertOcspResponse, encoding: .utf8),
+            let localVauCertOcspResponseDecoded = Data(base64Encoded: localVauCertOcspResponseBase64),
+            let ocspResponse = try? OCSPResponse(der: localVauCertOcspResponseDecoded),
+            // [REQ:gemSpec_Krypt:A_21216#2] OCSPResponse not older than OCSP-Graceperiod=12h else request a new one
+            ocspResponse.notProducedBefore(date: time().addingTimeInterval(-Self.ocspResponseExpiration)) {
+            // Locally saved OCSP response is available and still valid
+            return ocspResponse
+        } else {
+            return try await loadGracePeriodCheckedOcspResponseFromServer(
+                issuerCn: issuerCn,
+                serialNr: serialNr
+            )
+        }
+    }
+
+    func loadGracePeriodCheckedOcspResponseFromServer(
+        issuerCn: String,
+        serialNr: String
+    ) async throws -> OCSPResponse {
+        trustStoreStorage.set(vauCertificateOcspResponse: nil)
+        let remoteVauCertOcspResponse = try await trustStoreClient.loadOcspResponseFromServer(
+            issuerCn: issuerCn,
+            serialNr: serialNr
+        )
+        guard
+            let remoteVauCertOcspResponseBase64 = String(data: remoteVauCertOcspResponse, encoding: .utf8),
+            let remoteVauCertOcspResponseDecoded = Data(base64Encoded: remoteVauCertOcspResponseBase64),
+            let ocspResponse = try? OCSPResponse(der: remoteVauCertOcspResponseDecoded),
+            // [REQ:gemSpec_Krypt:A_21216#3] OCSPResponse not older than OCSP-Graceperiod=12h else decline
+            // [REQ:gemSpec_Krypt:A_25059] OCSPResponse not older than OCSP-Graceperiod=12h else decline
+            ocspResponse.notProducedBefore(date: time().addingTimeInterval(-Self.ocspResponseExpiration))
+        else {
+            throw TrustStoreError.invalidOCSPResponse
+        }
+        trustStoreStorage.set(vauCertificateOcspResponse: remoteVauCertOcspResponse)
+        return ocspResponse
+    }
 }
 
 extension Collection where Element == OCSPResponse {
     // [REQ:gemSpec_Krypt:A_21218] If only OCSP responses >12h available, we must request new ones
     func allSatisfyNotProducedBefore(date: Date) -> Bool {
         allSatisfy { ocspResponse in
-            guard let producedAt = try? ocspResponse.producedAt() else {
-                return false
-            }
-            return producedAt.timeIntervalSince(date) > 0
+            ocspResponse.notProducedBefore(date: date)
         }
+    }
+}
+
+extension OCSPResponse {
+    func notProducedBefore(date: Date) -> Bool {
+        guard let producedAt = try? self.producedAt() else {
+            return false
+        }
+        return producedAt.timeIntervalSince(date) > 0
     }
 }
 

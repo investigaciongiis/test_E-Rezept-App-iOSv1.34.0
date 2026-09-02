@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import ComposableArchitecture
@@ -23,7 +27,7 @@ import Perception
 import SwiftUI
 
 struct MedicationReminderOneDaySummaryView: View {
-    @Perception.Bindable var store: StoreOf<MedicationReminderOneDaySummaryDomain>
+    @Bindable var store: StoreOf<MedicationReminderOneDaySummaryDomain>
 
     @ScaledMetric var headerPlusBottomPlusSomeHeight = 320 // use this for limiting the ScrollView's height
 
@@ -34,55 +38,53 @@ struct MedicationReminderOneDaySummaryView: View {
     @Dependency(\.uiDateFormatter) var dateFormatter
 
     var body: some View {
-        WithPerceptionTracking {
-            VStack(spacing: 40) {
-                HeaderView { store.send(.closeButtonTapped) }
+        VStack(spacing: 40) {
+            HeaderView { store.send(.closeButtonTapped) }
 
-                if store.medicationSchedules.isEmpty {
-                    EmptyMedicationEvent()
-                        .padding(.horizontal)
-                } else {
-                    ScrollView {
-                        VStack(spacing: 40) {
-                            ForEach(store.medicationSchedules) { (schedule: MedicationSchedule) in
-                                VStack(spacing: 8) {
-                                    Text(schedule.title)
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+            if store.medicationSchedules.isEmpty {
+                EmptyMedicationEvent()
+                    .padding(.horizontal)
+            } else {
+                ScrollView {
+                    VStack(spacing: 40) {
+                        ForEach(store.medicationSchedules) { (schedule: MedicationSchedule) in
+                            VStack(spacing: 8) {
+                                Text(schedule.title)
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                                    ForEach(schedule.entries) { (entry: MedicationSchedule.Entry) in
-                                        let formattedHourMinute =
-                                            "\(entry.hourComponent.padWithLeadingZero):" +
-                                            "\(entry.minuteComponent.padWithLeadingZero)"
-                                        let dayTime = MedicationEvent.Daytime.from(hourComponent: entry.hourComponent)
-                                        MedicationEvent(
-                                            daytime: dayTime,
-                                            text: "\(formattedHourMinute) \(entry.amount) \(entry.dosageForm)"
-                                        )
-                                    }
+                                ForEach(schedule.entries) { (entry: MedicationSchedule.Entry) in
+                                    let formattedHourMinute =
+                                        "\(entry.hourComponent.padWithLeadingZero):" +
+                                        "\(entry.minuteComponent.padWithLeadingZero)"
+                                    let dayTime = MedicationEvent.Daytime.from(hourComponent: entry.hourComponent)
+                                    MedicationEvent(
+                                        daytime: dayTime,
+                                        text: "\(formattedHourMinute) \(entry.amount) \(entry.dosageForm)"
+                                    )
                                 }
                             }
                         }
-                        .padding(.horizontal)
                     }
-                    .frame(maxHeight: UIScreen.main.bounds.size.height - self.headerPlusBottomPlusSomeHeight)
+                    .padding(.horizontal)
                 }
+                .frame(maxHeight: UIScreen.main.bounds.size.height - self.headerPlusBottomPlusSomeHeight)
+            }
 
-                Button {
-                    store.send(.goToMedicationReminderListButtonTapped)
-                } label: {
-                    Text(L10n.medReminderBtnOneDaySummaryGoToRemindersOverviewButton)
-                        .fontWeight(.semibold)
-                }
-                .foregroundColor(Colors.primary600)
-                .accessibilityIdentifier(A11y.medicationReminder.medReminderBtnOneDaySummaryGoToRemindersOverviewButton)
+            Button {
+                store.send(.goToMedicationReminderListButtonTapped)
+            } label: {
+                Text(L10n.medReminderBtnOneDaySummaryGoToRemindersOverviewButton)
+                    .fontWeight(.semibold)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(Colors.systemBackground.ignoresSafeArea())
-            .onAppear {
-                store.send(.onAppear)
-            }
+            .foregroundColor(Colors.primary700)
+            .accessibilityIdentifier(A11y.medicationReminder.medReminderBtnOneDaySummaryGoToRemindersOverviewButton)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Colors.systemBackground.ignoresSafeArea())
+        .onAppear {
+            store.send(.onAppear)
         }
     }
 
@@ -216,7 +218,7 @@ struct MedicationReminderOneDaySummaryView: View {
                 Image(SFSymbolName
                     .alarm)
                                     .font(.largeTitle)
-                                    .foregroundColor(Colors.primary600)
+                                    .foregroundColor(Colors.primary700)
                                     .padding([.top, .bottom, .leading])
 
                 VStack(alignment: .leading) {

@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import CryptoKit
@@ -27,6 +31,20 @@ public struct TokenPayload: Codable {
     public var idToken: String
     public let ssoToken: String?
     public let tokenType: String
+
+    public init(
+        accessToken: String,
+        expiresIn: Int,
+        idToken: String,
+        ssoToken: String? = nil,
+        tokenType: String
+    ) {
+        self.accessToken = accessToken
+        self.expiresIn = expiresIn
+        self.idToken = idToken
+        self.ssoToken = ssoToken
+        self.tokenType = tokenType
+    }
 
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"
@@ -48,7 +66,7 @@ public struct TokenPayload: Codable {
         let njwt: String
     }
 
-    public struct AccesTokenPayload: Claims {
+    public struct AccessTokenPayload: Claims {
         public let exp: Date?
     }
 
@@ -69,6 +87,8 @@ public struct TokenPayload: Codable {
         public let displayName: String?
         /// Organization name
         public let organizationName: String?
+        /// Organization IK-Number
+        public let organizationIK: String?
         /// Profession ID of the user (e.g.: "1.2.276.0.76.4.49")
         public let professionOID: String?
         /// Health card number (e.g.: "X110443874")
@@ -97,6 +117,7 @@ public struct TokenPayload: Codable {
             case familyName = "family_name"
             case displayName = "display_name"
             case organizationName
+            case organizationIK
             case professionOID
             case idNummer
             case azp
@@ -124,7 +145,11 @@ extension TokenPayload {
         case decryption(Swift.Error)
     }
 
-    func decrypted(with aesKey: SymmetricKey) throws -> TokenPayload {
+    /// Decrypt the token payload using the provided AES key
+    /// - Parameter aesKey: AES symmetric key for decryption
+    /// - Returns: Decrypted TokenPayload with access and ID tokens
+    /// - Throws: TokenPayload.Error if decryption fails
+    public func decrypted(with aesKey: SymmetricKey) throws -> TokenPayload {
         guard let accessTokenData = accessToken.data(using: .utf8),
               let idTokenData = idToken.data(using: .utf8) else {
             throw Error.dataEncoding
@@ -160,7 +185,7 @@ public struct KeyVerifier: Codable {
     ///  random generated verifier code that was created and sent with the request challenge API call
     let verifierCode: VerifierCode
 
-    init(with key: SymmetricKey, codeVerifier: String) throws {
+    public init(with key: SymmetricKey, codeVerifier: String) throws {
         guard let encoded = key.withUnsafeBytes({ Data(Array($0)) }).encodeBase64UrlSafe(),
               let keyDataString = String(bytes: encoded, encoding: .utf8) else {
             throw Error.stringConversion
@@ -180,8 +205,8 @@ public struct KeyVerifier: Codable {
         case stringConversion
     }
 
-    func encrypted(with publicKey: BrainpoolP256r1.KeyExchange.PublicKey,
-                   using cryptoBox: IDPCrypto) throws -> JWE {
+    public func encrypted(with publicKey: BrainpoolP256r1.KeyExchange.PublicKey,
+                          using cryptoBox: IDPCrypto) throws -> JWE {
         // [REQ:gemSpec_IDP_Frontend:A_21323#2] Encode into JSON object
         // [REQ:gemSpec_IDP_Frontend:A_21324#3] Encode into JSON object
         guard let keyVerifierEncoded = try? KeyVerifier.jsonEncoder.encode(self) else {

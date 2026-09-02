@@ -1,22 +1,27 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import AVS
+import BfArM
 import Combine
 @testable import eRpFeatures
 import eRpKit
@@ -176,6 +181,8 @@ class MockUserSession: UserSession {
     lazy var secureEnclaveSignatureProvider: SecureEnclaveSignatureProvider = {
         MockSecureEnclaveSignatureProvider()
     }()
+
+    var bfarmSession: BfArMSession = .init(fetchBfArMInfo: { _ in nil }, fetchCachedImage: { _ in nil })
 }
 
 class MockSecureUserStore: SecureUserDataStore {
@@ -476,22 +483,29 @@ class FakeErxTaskRepository: ErxTaskRepository {
 
     }()
 
+    // MARK: - ErxDeviceRequest.DiGaInfo
+
+    func updateLocal(diGaInfo _: eRpKit.DiGaInfo) -> AnyPublisher<Bool, eRpKit.ErxRepositoryError> {
+        Just(true).setFailureType(to: ErrorType.self).eraseToAnyPublisher()
+    }
+
     static var exampleStore: [String: ErxTask] = {
-        let authoredOnNinetyTwoDaysBefore = DemoDate.createDemoDate(.ninetyTwoDaysBefore)
-        let authoredOnThirtyDaysBefore = DemoDate.createDemoDate(.thirtyDaysBefore)
-        let authoredOnSixteenDaysBefore = DemoDate.createDemoDate(.sixteenDaysBefore)
-        let authoredOnWeekBefore = DemoDate.createDemoDate(.weekBefore)
-        let expiresIn12DaysString = DemoDate.createDemoDate(.twelveDaysAhead)
-        let expiresYesterdayString = DemoDate.createDemoDate(.yesterday)
-        let expiresIn31DaysString = DemoDate.createDemoDate(.twentyEightDaysAhead)
-        let redeemedOnToday = DemoDate.createDemoDate(.today)
-        let handedOverAWeekBefore = DemoDate.createDemoDate(.weekBefore)
+        let authoredOnNinetyTwoDaysBefore = TestDate.createFormattedDate(.ninetyTwoDaysBefore, referenceDate: Date())
+        let authoredOnThirtyDaysBefore = TestDate.createFormattedDate(.thirtyDaysBefore, referenceDate: Date())
+        let authoredOnSixteenDaysBefore = TestDate.createFormattedDate(.sixteenDaysBefore, referenceDate: Date())
+        let authoredOnWeekBefore = TestDate.createFormattedDate(.weekBefore, referenceDate: Date())
+        let expiresIn12DaysString = TestDate.createFormattedDate(.twelveDaysAhead, referenceDate: Date())
+        let expiresYesterdayString = TestDate.createFormattedDate(.yesterday, referenceDate: Date())
+        let expiresIn31DaysString = TestDate.createFormattedDate(.twentyEightDaysAhead, referenceDate: Date())
+        let redeemedOnToday = TestDate.createFormattedDate(.today, referenceDate: Date())
+        let handedOverAWeekBefore = TestDate.createFormattedDate(.weekBefore, referenceDate: Date())
 
         return [
             // Group 1 [0 - 2]
             "0390f983-1e67-11b2-8555-63bf44e44fb8": ErxTask(
                 identifier: "0390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnThirtyDaysBefore,
@@ -506,6 +520,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "1": ErxTask(
                 identifier: "1390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnThirtyDaysBefore,
@@ -520,6 +535,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "2": ErxTask(
                 identifier: "2390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnThirtyDaysBefore,
@@ -535,6 +551,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "3": ErxTask(
                 identifier: "3390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnThirtyDaysBefore,
@@ -550,6 +567,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "4": ErxTask(
                 identifier: "490f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnWeekBefore,
@@ -564,6 +582,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "5": ErxTask(
                 identifier: "5390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnWeekBefore,
@@ -578,6 +597,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "6": ErxTask(
                 identifier: "6390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnWeekBefore,
@@ -593,6 +613,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "7": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44fb8",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnWeekBefore,
@@ -609,6 +630,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "8": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44f1c",
                 status: .completed,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnSixteenDaysBefore,
@@ -625,6 +647,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "9": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44f2c",
                 status: .completed,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e24",
                 fullUrl: nil,
                 authoredOn: authoredOnSixteenDaysBefore,
@@ -642,6 +665,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "10": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44f3c",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e25",
                 fullUrl: nil,
                 authoredOn: authoredOnSixteenDaysBefore,
@@ -660,6 +684,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "11": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44f4c",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e25",
                 fullUrl: nil,
                 authoredOn: authoredOnSixteenDaysBefore,
@@ -678,6 +703,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "12": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44f5c",
                 status: .ready,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e25",
                 fullUrl: nil,
                 authoredOn: authoredOnSixteenDaysBefore,
@@ -697,6 +723,7 @@ class FakeErxTaskRepository: ErxTaskRepository {
             "13": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44f6c",
                 status: .completed,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e25",
                 fullUrl: nil,
                 authoredOn: authoredOnNinetyTwoDaysBefore,
@@ -723,12 +750,14 @@ class FakeErxTaskRepository: ErxTaskRepository {
                         amount: .init(numerator: .init(value: "11")),
                         dosageForm: "TAB"
                     ),
-                    epaMedication: nil
+                    epaMedication: nil,
+                    diGaDispense: nil
                 )]
             ),
             "14": ErxTask(
                 identifier: "7390f983-1e67-11b2-8555-63bf44e44f7c",
                 status: .completed,
+                flowType: .pharmacyOnly,
                 accessCode: "e46ab30636811adaa210a719021701895f5787cab2c65420ffd02b3df25f6e25",
                 fullUrl: nil,
                 authoredOn: authoredOnNinetyTwoDaysBefore,
@@ -755,7 +784,8 @@ class FakeErxTaskRepository: ErxTaskRepository {
                             amount: .init(numerator: .init(value: "6")),
                             dosageForm: "TAB"
                         ),
-                        epaMedication: nil
+                        epaMedication: nil,
+                        diGaDispense: nil
                     ),
                     ErxMedicationDispense(
                         identifier: "098767825647892-2",
@@ -769,7 +799,9 @@ class FakeErxTaskRepository: ErxTaskRepository {
                             amount: .init(numerator: .init(value: "5")),
                             dosageForm: "TAB"
                         ),
-                        epaMedication: nil
+                        epaMedication: nil,
+                        diGaDispense: nil
+
                     ),
                 ]
             ),

@@ -1,14 +1,18 @@
 // sourcery:file:eRpApp/Generated/CodedError
 
 import AVS
+import BfArM
 import Combine
 import eRpKit
 import eRpLocalStorage
 import eRpRemoteStorage
 import FHIRClient
+import FHIRVZD
 import Foundation
+import FHIRVZD
 import HTTPClient
 import IDP
+import IDPLive
 import ModelsR4
 import OpenSSL
 import Pharmacy
@@ -54,6 +58,8 @@ import ZXingCpp
 {% macro wrap enum %}
     {% typed enum as Enum %}
     
+{% set localizedString %}{% for case in type.inheritedTypes where case|contains:"LocalizedError" %}1{% endfor %}{% endset %}
+{% typed localizedString as String %}
 extension {{ type.name }}: CodedError {
     var erpErrorCode: String {
         switch self {

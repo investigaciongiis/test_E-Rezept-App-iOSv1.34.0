@@ -1,22 +1,27 @@
 // swiftlint:disable:this file_name
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
+import ComposableArchitecture
 import Dependencies
 import Foundation
 import XCTestDynamicOverlay
@@ -354,20 +359,61 @@ extension DependencyValues {
     }
 }
 
+// MARK: BfArM
+
+import BfArM
+
+extension BfArMSession: @retroactive
+DependencyKey {
+    public static let liveValue: BfArMSession = .init { pzn in
+        @Dependency(\.bfarmClient) var client
+        @Dependency(\.userDataStore.appConfiguration) var appConfiguration
+
+        let config = BfArMClient.Configuration(
+            eRezeptAPIServer: appConfiguration.eRezept,
+            eRezeptAdditionalHeader: appConfiguration.eRezeptAdditionalHeader
+        )
+
+        return try await client.bfarmInfo(pzn, config)
+    } fetchCachedImage: { url in
+        @Dependency(\.bfarmClient) var client
+        @Dependency(\.userDataStore.appConfiguration) var appConfiguration
+
+        let config = BfArMClient.Configuration(
+            eRezeptAPIServer: appConfiguration.eRezept,
+            eRezeptAdditionalHeader: appConfiguration.eRezeptAdditionalHeader
+        )
+
+        return try await client.fetchCachedImage(url, config)
+    }
+
+    public static let testValue = BfArMSession()
+}
+
+extension DependencyValues {
+    var bfArMSession: BfArMSession {
+        get { self[BfArMSession.self] }
+        set { self[BfArMSession.self] = newValue }
+    }
+}
+
 // MARK: factories
 
 import FHIRClient
+import FHIRVZD
 
 struct PharmacyServiceFactory {
-    let construct: (FHIRClient) -> PharmacyRemoteDataStore
+    let construct: (_ fhirClient: FHIRClient, _ fhirVZDSession: FHIRVZDSession) -> PharmacyRemoteDataStore
 
-    init(construct: @escaping (FHIRClient) -> PharmacyRemoteDataStore) {
+    init(construct: @escaping (_ fhirClient: FHIRClient, _ fhirVZDSession: FHIRVZDSession) -> PharmacyRemoteDataStore) {
         self.construct = construct
     }
 }
 
 extension PharmacyServiceFactory: DependencyKey {
-    static var liveValue = PharmacyServiceFactory(construct: PharmacyFHIRDataSource.init)
+    static var liveValue = PharmacyServiceFactory { fhirClient, fhirVZDSession in
+        HealthcareServiceFHIRDataSource(fhirClient: fhirClient, session: fhirVZDSession)
+    }
 }
 
 extension DependencyValues {

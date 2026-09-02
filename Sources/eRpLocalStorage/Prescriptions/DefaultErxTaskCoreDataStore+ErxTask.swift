@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -106,6 +110,7 @@ extension DefaultErxTaskCoreDataStore {
     ///   otherwise.
     /// - Returns: A publisher that finishes with `true` on completion or fails with an error.
     public func save(tasks: [ErxTask], updateProfileLastAuthenticated: Bool) -> AnyPublisher<Bool, LocalStoreError> {
+        // swiftlint:disable:previous function_body_length
         coreDataCrudable.save(mergePolicy: .mergeByPropertyObjectTrump) { [weak self] moc in
             let profileEntity = self?.fetchProfile(in: moc)
 
@@ -130,6 +135,8 @@ extension DefaultErxTaskCoreDataStore {
                     profileEntity?.lastAuthenticated = Date()
                 }
 
+                let listAllDiGaInfo = self.listAllDiGaInfo(for: profileEntity, in: moc)
+
                 for task in tasks {
                     let taskEntity = ErxTaskEntity.from(task: task, in: moc)
 
@@ -142,6 +149,13 @@ extension DefaultErxTaskCoreDataStore {
                     )
 
                     taskEntity.medicationSchedule = self.fetchMedicationSchedule(for: task.identifier)
+
+                    if taskEntity.deviceRequest?.appName != nil {
+                        let diGaInfo = listAllDiGaInfo.first { $0.taskId == task.identifier }
+                        taskEntity.deviceRequest?.diGaInfo = diGaInfo ?? .from(diGaInfo: .init(diGaState: .request,
+                                                                                               taskId: task.identifier),
+                                                                               in: moc)
+                    }
 
                     _ = try? request.execute().map {
                         taskEntity.addToMedicationDispenses($0)
@@ -181,6 +195,29 @@ extension DefaultErxTaskCoreDataStore {
         }
 
         return result.first
+    }
+
+    func listAllDiGaInfo(for _: ProfileEntity?, in context: NSManagedObjectContext) -> [DiGaInfoEntity] {
+        let request: NSFetchRequest<DiGaInfoEntity> = DiGaInfoEntity.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(
+            key: #keyPath(ErxChargeItemEntity.taskId),
+            ascending: false
+        )]
+        if let identifier = profileId {
+            request.predicate = NSPredicate(
+                format: "%K == %@",
+                argumentArray: [#keyPath(DiGaInfoEntity.deviceRequest.task.profile.identifier), identifier]
+            )
+        }
+
+        var results: [DiGaInfoEntity] = []
+        do {
+            results = try context.fetch(request)
+        } catch {
+            assertionFailure("DiGaInfoEntity loading error")
+        }
+
+        return results
     }
 
     /// Deletes a sequence of tasks from the store

@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -128,20 +132,45 @@ final class AppAuthenticationBiometricPasswordDomainTests: XCTestCase {
             state.lastMatchResultSuccessful = true
         }
         expect(self.mockAppSecurityPasswordManager.matchesPasswordCalled).to(beTrue())
+        expect(self.mockAppSecurityPasswordManager.resetPasswordDelayCalled).to(beTrue())
+        expect(self.mockAppSecurityPasswordManager.registerFailedPasswordAttemptCalled).to(beFalse())
     }
 
     func testPasswordDoesNotMatch() async {
-        let store = testStore(
-            for: .init(biometryType: .faceID, startImmediateAuthenticationChallenge: false, password: "abc"),
-            withResult: .failure(.cannotEvaluatePolicy(nil))
-        )
-        mockAppSecurityPasswordManager.matchesPasswordReturnValue = false
+        let clock = TestClock()
+        let mockAppSecurityManager = MockAppSecurityManager()
 
-        expect(self.mockAppSecurityPasswordManager.matchesPasswordCalled).to(beFalse())
+        let store = TestStore(initialState: AppAuthenticationBiometricPasswordDomain.State(
+            biometryType: .faceID,
+            startImmediateAuthenticationChallenge: false,
+            password: "abc"
+        )) {
+            AppAuthenticationBiometricPasswordDomain()
+        } withDependencies: {
+            $0.appSecurityManager = mockAppSecurityManager
+            $0.continuousClock = clock
+        }
+        mockAppSecurityManager.matchesPasswordReturnValue = false
+        mockAppSecurityManager.currentPasswordDelayReturnValue = 10.0
+
+        expect(mockAppSecurityManager.matchesPasswordCalled).to(beFalse())
         await store.send(.loginButtonTapped)
         await store.receive(.passwordVerificationReceived(false)) { state in
             state.lastMatchResultSuccessful = false
         }
-        expect(self.mockAppSecurityPasswordManager.matchesPasswordCalled).to(beTrue())
+        await store.receive(.currentPasswordDelayReceived(10.0)) { state in
+            state.passwordDelay = 10.0
+        }
+
+        await clock.advance(by: .seconds(10))
+        for _ in 0 ..< 10 {
+            await store.receive(.passwordDelayTimerTick) { state in
+                state.passwordDelay -= 1.0
+            }
+        }
+
+        expect(mockAppSecurityManager.matchesPasswordCalled).to(beTrue())
+        expect(mockAppSecurityManager.resetPasswordDelayCalled).to(beFalse())
+        expect(mockAppSecurityManager.registerFailedPasswordAttemptCalled).to(beTrue())
     }
 }

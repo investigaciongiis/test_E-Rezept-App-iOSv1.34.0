@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -140,6 +144,7 @@ public class ProfileCoreDataStore: ProfileDataStore, CoreDataCrudable {
                     profileEntity.name = profile.name
                     profileEntity.insuranceId = profile.insuranceId
                     profileEntity.insuranceType = profile.insuranceType.rawValue
+                    profileEntity.insuranceIK = profile.insuranceIK
                     profileEntity.insurance = profile.insurance
                     profileEntity.givenName = profile.givenName
                     profileEntity.familyName = profile.familyName
@@ -148,6 +153,7 @@ public class ProfileCoreDataStore: ProfileDataStore, CoreDataCrudable {
                     profileEntity.image = profile.image.rawValue
                     profileEntity.userImageData = profile.userImageData
                     profileEntity.lastAuthenticated = profile.lastAuthenticated
+                    profileEntity.hideWelcomeDrawerOnMainView = profile.hideWelcomeDrawerOnMainView
                     profileEntity.hidePkvConsentDrawerOnMainView = profile.hidePkvConsentDrawerOnMainView
                     profileEntity.shouldAutoUpdateNameAtNextLogin = profile.shouldAutoUpdateNameAtNextLogin
                     profileEntity.gIdEntry = try? ProfileCoreDataStore.encoder.encode(profile.gIdEntry)
@@ -177,6 +183,7 @@ public class ProfileCoreDataStore: ProfileDataStore, CoreDataCrudable {
                 profileEntity.name = profile.name
                 profileEntity.insuranceId = profile.insuranceId
                 profileEntity.insuranceType = profile.insuranceType.rawValue
+                profileEntity.insuranceIK = profile.insuranceIK
                 profileEntity.insurance = profile.insurance
                 profileEntity.givenName = profile.givenName
                 profileEntity.familyName = profile.familyName
@@ -185,6 +192,7 @@ public class ProfileCoreDataStore: ProfileDataStore, CoreDataCrudable {
                 profileEntity.image = profile.image.rawValue
                 profileEntity.userImageData = profile.userImageData
                 profileEntity.lastAuthenticated = profile.lastAuthenticated
+                profileEntity.hideWelcomeDrawerOnMainView = profile.hideWelcomeDrawerOnMainView
                 profileEntity.hidePkvConsentDrawerOnMainView = profile.hidePkvConsentDrawerOnMainView
                 profileEntity.shouldAutoUpdateNameAtNextLogin = profile.shouldAutoUpdateNameAtNextLogin
                 profileEntity.gIdEntry = try? ProfileCoreDataStore.encoder.encode(profile.gIdEntry)

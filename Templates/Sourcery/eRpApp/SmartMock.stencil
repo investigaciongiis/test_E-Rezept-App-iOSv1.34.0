@@ -26,7 +26,7 @@
                 })
                 .eraseToAnyPublisher()
             {% else %}
-            {{ method.selectorName|swiftIdentifier|snakeToCamelCase|lowerFirstLetter }}Recordings.record({{ "SerializableX509.from(" if method.returnTypeName|contains:"X509" }}value{{ ")" if method.returnTypeName|contains:"X509" }})
+            {{ method.selectorName|swiftIdentifier|snakeToCamelCase|lowerFirstLetter }}Recordings.record(result)
             {% endif %}
             return result
         }
@@ -247,8 +247,10 @@ import eRpKit
 import eRpLocalStorage
 import eRpRemoteStorage
 import Foundation
+import HTTPClient
 import IdentifiedCollections
 import IDP
+import IDPLive
 import OpenSSL
 import Pharmacy
 {% for type in types.protocols where type.based.SmartMock or type|annotated:"SmartMock" %}

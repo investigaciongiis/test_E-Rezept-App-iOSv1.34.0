@@ -2,14 +2,18 @@
 // DO NOT EDIT
 
 import AVS
+import BfArM
 import Combine
 import eRpKit
 import eRpLocalStorage
 import eRpRemoteStorage
 import FHIRClient
+import FHIRVZD
 import Foundation
+import FHIRVZD
 import HTTPClient
 import IDP
+import IDPLive
 import ModelsR4
 import OpenSSL
 import Pharmacy
@@ -105,13 +109,15 @@ extension AppSecurityManagerError: CodedError {
     var erpErrorCode: String {
         switch self {
             case .savePasswordFailed:
-                return "i-00601"
+                return "i-04401"
             case .retrievePasswordFailed:
-                return "i-00602"
+                return "i-04402"
             case .localAuthenticationContext:
-                return "i-00603"
+                return "i-04403"
             case .migrationFailed:
-                return "i-00604"
+                return "i-04404"
+            case .passwordDelayInfoIOFailed:
+                return "i-04405"
         }
     }
     var erpErrorCodeList: [String] {
@@ -161,6 +167,37 @@ extension AuthenticationChallengeProviderError: CodedError {
             case .cannotEvaluatePolicy:
                 return [erpErrorCode]
             case .failedEvaluatingPolicy:
+                return [erpErrorCode]
+        }
+    }
+}
+
+extension BfArMError: CodedError {
+    var erpErrorCode: String {
+        switch self {
+            case .network:
+                return "i-30101"
+            case .decoding:
+                return "i-30102"
+            case .invalidAssetLink:
+                return "i-30103"
+            case .unspecified:
+                return "i-30104"
+        }
+    }
+    var erpErrorCodeList: [String] {
+        switch self {
+            case let .network(error):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case let .decoding(error as CodedError):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case .decoding:
+                return [erpErrorCode]
+            case let .unspecified(error as CodedError):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case .unspecified:
+                return [erpErrorCode]
+            default:
                 return [erpErrorCode]
         }
     }
@@ -277,17 +314,17 @@ extension ChargeItemConsentService.Error: CodedError {
     var erpErrorCode: String {
         switch self {
             case .localStore:
-                return "i-03601"
+                return "i-04101"
             case .loginHandler:
-                return "i-03602"
+                return "i-04102"
             case .erxRepository:
-                return "i-03603"
+                return "i-04103"
             case .unexpectedGrantConsentResponse:
-                return "i-03604"
+                return "i-04104"
             case .unexpected:
-                return "i-03605"
+                return "i-04105"
             case .unexpectedRevokeConsentResponse:
-                return "i-03606"
+                return "i-04106"
         }
     }
     var erpErrorCodeList: [String] {
@@ -640,9 +677,9 @@ extension ErxTaskOrder.Error: CodedError {
     var erpErrorCode: String {
         switch self {
             case .unableToConstructCommunicationRequest:
-                return "i-20601"
+                return "i-20801"
             case .invalidErxTaskOrderInput:
-                return "i-20602"
+                return "i-20802"
         }
     }
     var erpErrorCodeList: [String] {
@@ -702,6 +739,37 @@ extension FHIRClient.Error: CodedError {
             case .unknown:
                 return [erpErrorCode]
             case .http:
+                return [erpErrorCode]
+            default:
+                return [erpErrorCode]
+        }
+    }
+}
+
+extension FHIRVZDError: CodedError {
+    var erpErrorCode: String {
+        switch self {
+            case .network:
+                return "i-30001"
+            case .tokenUnavailable:
+                return "i-30002"
+            case .decoding:
+                return "i-30003"
+            case .unspecified:
+                return "i-30004"
+        }
+    }
+    var erpErrorCodeList: [String] {
+        switch self {
+            case let .network(error):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case let .decoding(error as CodedError):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case .decoding:
+                return [erpErrorCode]
+            case let .unspecified(error as CodedError):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case .unspecified:
                 return [erpErrorCode]
             default:
                 return [erpErrorCode]
@@ -769,6 +837,21 @@ extension HTTPClientError: CodedError {
     }
 }
 
+extension HealthcareServiceBundleParsingError: CodedError {
+    var erpErrorCode: String {
+        switch self {
+            case .parseError:
+                return "i-61001"
+        }
+    }
+    var erpErrorCodeList: [String] {
+        switch self {
+            case .parseError:
+                return [erpErrorCode]
+        }
+    }
+}
+
 extension IDPError: CodedError {
     var erpErrorCode: String {
         switch self {
@@ -816,8 +899,10 @@ extension IDPError: CodedError {
     }
     var erpErrorCodeList: [String] {
         switch self {
-            case let .network(error):
+            case let .network(error as CodedError):
                 return [erpErrorCode] + error.erpErrorCodeList
+            case .network:
+                return [erpErrorCode]
             case let .validation(error as CodedError):
                 return [erpErrorCode] + error.erpErrorCodeList
             case .validation:
@@ -834,8 +919,10 @@ extension IDPError: CodedError {
                 return [erpErrorCode]
             case let .`internal`(error):
                 return [erpErrorCode] + error.erpErrorCodeList
-            case let .trustStore(error):
+            case let .trustStore(error as CodedError):
                 return [erpErrorCode] + error.erpErrorCodeList
+            case .trustStore:
+                return [erpErrorCode]
             case let .pairing(error as CodedError):
                 return [erpErrorCode] + error.erpErrorCodeList
             case .pairing:
@@ -1199,7 +1286,7 @@ extension MedicationReminderListDomain.Error: CodedError {
     var erpErrorCode: String {
         switch self {
             case .generic:
-                return "i-03601"
+                return "i-04201"
         }
     }
     var erpErrorCodeList: [String] {
@@ -1617,6 +1704,29 @@ extension ProfileCoreDataStore.Error: CodedError {
     }
 }
 
+extension RedeemOrderServiceError: CodedError {
+    var erpErrorCode: String {
+        switch self {
+            case .localStore:
+                return "i-03901"
+            case .pharmacy:
+                return "i-03902"
+            case .redeem:
+                return "i-03903"
+        }
+    }
+    var erpErrorCodeList: [String] {
+        switch self {
+            case let .localStore(error):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case let .pharmacy(error):
+                return [erpErrorCode] + error.erpErrorCodeList
+            case let .redeem(error):
+                return [erpErrorCode] + error.erpErrorCodeList
+        }
+    }
+}
+
 extension RedeemServiceError: CodedError {
     var erpErrorCode: String {
         switch self {
@@ -1877,7 +1987,7 @@ extension ShareSheetDomain.Error: CodedError {
     var erpErrorCode: String {
         switch self {
             case .shareFailure:
-                return "i-03801"
+                return "i-04301"
         }
     }
     var erpErrorCodeList: [String] {
@@ -1981,6 +2091,10 @@ extension TrustStoreError: CodedError {
                 return "i-56005"
             case .`internal`:
                 return "i-56006"
+            case .noValidVauCertificateAvailable:
+                return "i-56007"
+            case .malformedCertificate:
+                return "i-56008"
         }
     }
     var erpErrorCodeList: [String] {
@@ -2003,19 +2117,25 @@ extension TrustStoreError.InternalError: CodedError {
     var erpErrorCode: String {
         switch self {
             case .loadOCSPCheckedTrustStoreUnexpectedNil:
-                return "i-5611"
+                return "i-56101"
             case .loadCertListFromServerUnexpectedNil:
-                return "i-5612"
+                return "i-56102"
             case .loadOCSPListFromServerUnexpectedNil:
-                return "i-5613"
+                return "i-56103"
             case .trustStoreCertListUnexpectedNil:
-                return "i-5614"
+                return "i-56104"
             case .loadOCSPResponsesUnexpectedNil:
-                return "i-5615"
+                return "i-56105"
             case .missingSignerForEECertificate:
-                return "i-5616"
+                return "i-56106"
             case .notImplemented:
-                return "i-5617"
+                return "i-56107"
+            case .trustAnchorUnexpectedFormat:
+                return "i-56108"
+            case .vauCertificateUnexpectedFormat:
+                return "i-56109"
+            case .trustStoreCreationFailed:
+                return "i-56110"
         }
     }
     var erpErrorCodeList: [String] {

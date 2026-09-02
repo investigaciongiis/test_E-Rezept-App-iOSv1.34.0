@@ -1,22 +1,25 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
-import ASN1Kit
 import Combine
 import Foundation
 import OpenSSL
@@ -48,10 +51,12 @@ public struct PrivateKeyContainer {
         case canceledByUser
     }
 
-    let privateKey: SecKey
-    let publicKey: SecKey
+    private let privateKey: SecKey
+    /// The public key associated with the private key.
+    public let publicKey: SecKey
 
-    let tag: String
+    /// The tag or identifier of the key
+    public let tag: String
 
     /// Initializes a `PrivateKeyContainer` for a given tag. Throws `PrivateKeyContainer.Error` in case of a failure.
     /// - Parameter tag: The `tag` or identifier of the key.
@@ -205,38 +210,10 @@ public struct PrivateKeyContainer {
     }
     #endif
 
-    func publicKeyData() throws -> Data {
-        var error: Unmanaged<CFError>?
-
-        let keyData = SecKeyCopyExternalRepresentation(publicKey, &error)
-
-        guard let unwrappedKeyData = keyData else {
-            throw Error.convertingKey(error?.takeRetainedValue())
-        }
-
-        return unwrappedKeyData as Data
-    }
-
-    func asn1PublicKey() throws -> Data {
-        let asn1 = ASN1Data.constructed(
-            [
-                create(tag: .universal(.sequence), data: ASN1Data.constructed(
-                    [
-                        try ObjectIdentifier.from(string: "1.2.840.10045.2.1").asn1encode(),
-                        try ObjectIdentifier.from(string: "1.2.840.10045.3.1.7").asn1encode(),
-                    ]
-                )),
-
-                try publicKeyData().asn1bitStringEncode(),
-            ]
-        )
-        return try create(tag: .universal(.sequence), data: asn1).serialize()
-    }
-
     /// Sign the given `Data` with the private key.
     /// - Parameter data: Data to sign with the private key.
     /// - Throws: `PrivateKeyContainer.Error` in case of a failure or a missing key.
-    /// - Returns: Data in concat format containing the Signature `r` | `s`.
+    /// - Returns: signature
     public func sign(data: Data) throws -> Data {
         let algorithm: SecKeyAlgorithm = .ecdsaSignatureMessageX962SHA256
 
@@ -261,29 +238,6 @@ public struct PrivateKeyContainer {
             throw Error.signing(error)
         }
 
-        return try signature.derToConcat()
-    }
-}
-
-// sourcery: CodedError = "107"
-public enum ConversionError: Swift.Error {
-    // sourcery: errorCode = "01"
-    case generic(String?)
-}
-
-extension Data {
-    // From jose4j EcdsaUsingShaAlgorithm.java
-    func derToConcat() throws -> Data {
-        let wholeASN1 = try ASN1Decoder.decode(asn1: self)
-        let sequence = try Array(from: wholeASN1)
-
-        guard sequence.count == 2 else {
-            throw ConversionError.generic("Error converting EC signature. Expected 2 elements, found \(sequence.count)")
-        }
-
-        let signatureR = try Data(from: sequence[0]).dropLeadingZeroByte.padWithLeadingZeroes(totalLength: 32)
-        let signatureS = try Data(from: sequence[1]).dropLeadingZeroByte.padWithLeadingZeroes(totalLength: 32)
-
-        return signatureR + signatureS
+        return signature
     }
 }

@@ -1,39 +1,43 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Foundation
 import Nimble
 import XCTest
 
-final class CreatePasswordUITests: XCTestCase {
+@MainActor
+final class CreatePasswordUITests: XCTestCase, Sendable {
     var app: XCUIApplication!
 
-    override func tearDown() {
-        super.tearDown()
+    override func tearDown() async throws {
+        try await super.tearDown()
 
         notificationAlertMonitor.map { [self] in removeUIInterruptionMonitor($0) }
     }
 
     var notificationAlertMonitor: NSObjectProtocol?
 
-    @MainActor
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
 
         disableAutoFillPasswords()
 
@@ -57,9 +61,8 @@ final class CreatePasswordUITests: XCTestCase {
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.01)).tap()
     }
 
-    // Disabled due to bug in iOS 17.2 Settings App, autofill is broken
     @MainActor
-    func disabledtestChangePassword() {
+    func testChangePassword() {
         let tabBar = TabBarScreen(app: app)
 
         let changePasswordScreen = tabBar
@@ -70,19 +73,19 @@ final class CreatePasswordUITests: XCTestCase {
         changePasswordScreen.enterNewPassword("1n1n1n1n")
         changePasswordScreen.enterNewPassword("\r")
         expect(changePasswordScreen.passwordStrengthErrorFooter().label)
-            .to(equal("Sicherheitsstufe des gewählten Kennworts nicht ausreichend"))
+            .to(equal("Sicherheitsstufe des gewählten Passwortes nicht ausreichend"))
 
         changePasswordScreen.enterNewPassword(XCUIKeyboardKey.delete.rawValue)
         changePasswordScreen.enterNewPassword("1n1n1n1n1n1n")
         changePasswordScreen.enterNewPassword("\r")
-        expect(changePasswordScreen.passwordStrengthIndicator().label).to(beginWith("Kennwortstärke ausreichend"))
+        expect(changePasswordScreen.passwordStrengthIndicator().label).to(beginWith("Passwortstärke ausreichend"))
         expect(changePasswordScreen.passwordStrengthErrorFooter().exists).to(beFalse())
 
         changePasswordScreen.enterNewPassword(XCUIKeyboardKey.delete.rawValue)
 
         changePasswordScreen.enterNewPassword("1n1n1n1n1n1n1n1n1n")
         changePasswordScreen.enterNewPassword("\r")
-        expect(changePasswordScreen.passwordStrengthIndicator().label).to(beginWith("Kennwortstärke sehr gut"))
+        expect(changePasswordScreen.passwordStrengthIndicator().label).to(beginWith("Passwortstärke sehr gut"))
 
         changePasswordScreen.enterNewPasswordAgain("1n1n1n1n1n1n1n1n")
         changePasswordScreen.enterNewPasswordAgain("\r")
@@ -104,63 +107,5 @@ final class CreatePasswordUITests: XCTestCase {
         changePasswordScreenExists = changePasswordScreen.currentPasswordWrong()
             .waitForExistence(timeout: TimeInterval(5))
         expect(changePasswordScreenExists).to(beTrue())
-    }
-
-    @MainActor
-    private func disableAutoFillPasswords() {
-        let settingsApp = XCUIApplication(bundleIdentifier: "com.apple.Preferences")
-        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
-
-        settingsApp.launch()
-
-        // iOS 18
-        if !(ProcessInfo.processInfo.environment["SIMULATOR_RUNTIME_VERSION"]?.starts(with: "17") ?? true) {
-            var exists = false
-
-            let generalEn = settingsApp.staticTexts["General"]
-            let generalDe = settingsApp.staticTexts["Allgemein"]
-            if generalEn.exists {
-                generalEn.tap()
-            } else {
-                generalDe.tap()
-            }
-            settingsApp.staticTexts["AUTOFILL"].tap()
-            let switcher = settingsApp.switches["Passwörter und Passkeys automatisch ausfüllen"].switches.firstMatch
-
-            exists = switcher.waitForExistence(timeout: TimeInterval(5))
-            XCTAssertTrue(exists, "Switcher exists")
-            if switcher.value as? String == "1" {
-                switcher.tap()
-            }
-
-        } else {
-            // iOS 17:
-            let passRow = settingsApp.tables.staticTexts["PASSWORDS"]
-            var exists = passRow.waitForExistence(timeout: TimeInterval(5))
-            // sometimes the settings app opens with the passcodeInput screen already in place
-            // so we ignore the next line's check
-            //        XCTAssertTrue(exists, "PASSWORDS entry exists")
-            if exists {
-                passRow.tap()
-            }
-
-            let passcodeInput = springboard.secureTextFields.firstMatch
-            exists = passcodeInput.waitForExistence(timeout: TimeInterval(5))
-            XCTAssertTrue(exists, "Passcode field exists")
-            passcodeInput.tap()
-            passcodeInput.typeText("abc\r")
-            let cell = settingsApp.tables.cells["PasswordOptionsCell"].buttons["chevron"]
-            exists = cell.waitForExistence(timeout: TimeInterval(5))
-            XCTAssertTrue(exists, "Password options cell exists")
-            cell.tap()
-            let toggleLabel = settingsApp.tables.staticTexts.firstMatch.label // "AutoFill Passwords"
-            let switcher = settingsApp.switches[toggleLabel]
-            exists = switcher.waitForExistence(timeout: TimeInterval(5))
-            XCTAssertTrue(exists, "Switcher exists")
-            let enabledState = switcher.value as? String
-            if enabledState == "1" {
-                switcher.tap()
-            }
-        }
     }
 }

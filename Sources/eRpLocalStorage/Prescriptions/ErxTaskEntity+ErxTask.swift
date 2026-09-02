@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import CoreData
@@ -29,7 +33,7 @@ extension ErxTaskEntity {
     convenience init(task: ErxTask, in context: NSManagedObjectContext) {
         self.init(context: context)
         identifier = task.identifier
-        flowType = task.flowType?.rawValue
+        flowType = task.flowType.rawValue
         prescriptionId = task.prescriptionId
         accessCode = task.accessCode
         fullUrl = task.fullUrl
@@ -41,7 +45,7 @@ extension ErxTaskEntity {
         redeemedOn = task.redeemedOn
         author = task.author
         dispenseValidityEnd = task.medicationRequest.dispenseValidityEnd
-        bvg = task.medicationRequest.bvg
+        ser = task.medicationRequest.ser
         dosageInstructions = task.medicationRequest.dosageInstructions
         coPaymentStatus = task.medicationRequest.coPaymentStatus?.rawValue
         noctuFeeWaiver = task.medicationRequest.hasEmergencyServiceFee
@@ -67,6 +71,8 @@ extension ErxTaskEntity {
                                                  in: context)
         organization = ErxTaskOrganizationEntity(organization: task.organization,
                                                  in: context)
+        deviceRequest = ErxTaskDeviceRequestEntity(request: task.deviceRequest,
+                                                   in: context)
         // Note: communications, avsTransactions and medicationDispenses are not set here
         // since they are loaded asynchronous from remote
     }
@@ -98,7 +104,8 @@ extension ErxTask {
     private static func updatedStatusForServerTask(
         lastModified: Date?,
         communications: [ErxTask.Communication],
-        currentDate now: Date
+        currentDate now: Date,
+        isDiGa: Bool = false
     ) -> ErxTask.Status? {
         let comms = communications.filter { communication in
             guard communication.profile == .dispReq,
@@ -114,11 +121,14 @@ extension ErxTask {
                     return false
                 }
             }
+            // For DiGa we dont have a time limit and wait until we get a response from the organization
+            guard !isDiGa else { return true }
             return redeemedTimeInterval < ErxTask.minTimeIntervalForCompletion &&
                 redeemedTimeInterval > 0
         }
         if !comms.isEmpty {
-            return .computed(status: .waiting)
+            // DiGa is instantly inProgress state and has no waiting state
+            return isDiGa ? .inProgress : .computed(status: .waiting)
         }
         return nil
     }
@@ -134,6 +144,13 @@ extension ErxTask {
     init?(entity: ErxTaskEntity, dateProvider: () -> Date) {
         guard let identifier = entity.identifier else {
             return nil
+        }
+
+        var flowType: ErxTask.FlowType
+        if let flowTypeCode = entity.flowType {
+            flowType = ErxTask.FlowType(rawValue: flowTypeCode)
+        } else {
+            flowType = ErxTask.FlowType(taskId: identifier)
         }
 
         let now = dateProvider()
@@ -179,7 +196,8 @@ extension ErxTask {
             erxTaskStatus = ErxTask.updatedStatusForServerTask(
                 lastModified: entity.lastModified?.date,
                 communications: mappedCommunications,
-                currentDate: now
+                currentDate: now,
+                isDiGa: entity.deviceRequest?.pzn != nil
             ) ?? erxTaskStatus
         case (.inProgress, _):
             guard entity.lastMedicationDispense == nil else {
@@ -204,7 +222,7 @@ extension ErxTask {
         self.init(
             identifier: identifier,
             status: erxTaskStatus,
-            flowType: ErxTask.FlowType(rawValue: entity.flowType),
+            flowType: flowType,
             accessCode: entity.accessCode,
             fullUrl: entity.fullUrl,
             authoredOn: entity.authoredOn,
@@ -225,7 +243,7 @@ extension ErxTask {
                 hasEmergencyServiceFee: entity.noctuFeeWaiver,
                 dispenseValidityEnd: entity.dispenseValidityEnd,
                 accidentInfo: AccidentInfo(entity: entity.accidentInfo),
-                bvg: entity.bvg,
+                ser: entity.ser,
                 coPaymentStatus: CoPaymentStatus(rawValue: entity.coPaymentStatus ?? "nil"),
                 multiplePrescription: MultiplePrescription(entity: entity.multiplePrescription),
                 quantity: quantity
@@ -237,7 +255,8 @@ extension ErxTask {
             communications: mappedCommunications
                 .sorted { $0.timestamp < $1.timestamp },
             medicationDispenses: medicationDispenses
-                .sorted { $0.identifier < $1.identifier }
+                .sorted { $0.identifier < $1.identifier },
+            deviceRequest: ErxDeviceRequest(entity: entity.deviceRequest)
         )
     }
 }

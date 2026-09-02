@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -30,7 +34,8 @@ public protocol PharmacyRepository {
     /// - Parameters:
     ///   - telematikId: The telematik ID of the pharmacy
     /// - Returns: Publisher for the load and saved request or fails
-    func updateFromRemote(by telematikId: String) -> AnyPublisher<PharmacyLocation, PharmacyRepositoryError>
+    func updateFromRemote(by telematikId: String)
+        -> AnyPublisher<PharmacyLocation, PharmacyRepositoryError>
 
     /// Loads the `PharmacyLocation` by its telematik ID from disk or if not present from a remote (server).
     ///
@@ -47,10 +52,11 @@ public protocol PharmacyRepository {
     ///   - position: the Position which is used as a search point for an "around me" search
     ///   - filter: further filter parameters for pharmacies
     /// - Returns: `AnyPublisher` that emits a list of `PharmacyLocation`s or is empty when not found
-    func searchRemote(searchTerm: String,
-                      position: Position?,
-                      filter: [PharmacyRepositoryFilter])
-        -> AnyPublisher<[PharmacyLocation], PharmacyRepositoryError>
+    func searchRemote(
+        searchTerm: String,
+        position: Position?,
+        filter: [PharmacyRepositoryFilter]
+    ) -> AnyPublisher<[PharmacyLocation], PharmacyRepositoryError>
 
     /// Loads the `PharmacyLocation` by its telematik ID from disk
     ///
@@ -81,6 +87,17 @@ public protocol PharmacyRepository {
     /// - Parameter id: id of `PharmacyLocation` from which to load the certificate
     /// - Returns: Emits an array of certificates on success or fails with a `PharmacyRepositoryError`
     func loadAvsCertificates(for id: String) -> AnyPublisher<[X509], PharmacyRepositoryError>
+
+    /// Load `Insurance` by institution identifier (IK) from a remote (server).
+    /// - Parameters:
+    ///   - ikNumber: The institution (IK) identifier of the organization to be requested
+    /// - Returns: `AnyPublisher` that emits the `Insurance` or nil when not found
+    func fetchInsurance(ikNumber: String) -> AnyPublisher<Insurance?, PharmacyRepositoryError>
+
+    /// Loads an array of `Insurance` from a remote (server).
+    /// - Parameters:
+    /// - Returns: `AnyPublisher` that emits array of `Insurance` or empty when nothing is found
+    func fetchAllInsurances() -> AnyPublisher<[Insurance], PharmacyRepositoryError>
 }
 
 extension PharmacyRepository {
@@ -111,27 +128,6 @@ public enum PharmacyRepositoryFilter {
     case shipment
     /// Matching pharmacies provide local delivery services (Botendienst)
     case delivery
-}
-
-extension PharmacyRepositoryFilter {
-    var asAPIFilter: (String, String)? {
-        switch self {
-        case .ready:
-            return ("status", "active")
-        case .shipment:
-            return ("type", "mobl")
-        case .delivery:
-            return nil
-        }
-    }
-}
-
-// swiftlint:disable:next no_extension_access_modifier
-public extension Collection where Element == PharmacyRepositoryFilter {
-    /// Group elements for `PharmacyRepositoryFilter` elements
-    func asAPIFilter() -> [String: String] {
-        Dictionary(uniqueKeysWithValues: compactMap(\.asAPIFilter))
-    }
 }
 
 /// Position which is used as a search point for an "around me" search.

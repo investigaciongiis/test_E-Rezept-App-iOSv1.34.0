@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import CasePaths
@@ -22,43 +26,40 @@ import eRpStyleKit
 import SwiftUI
 
 struct ProfilesView: View {
-    @Perception.Bindable var store: StoreOf<ProfilesDomain>
+    @Bindable var store: StoreOf<ProfilesDomain>
 
     var body: some View {
-        WithPerceptionTracking {
-            SectionContainer(
-                header: {
-                    Label(title: {
-                        Text(L10n.stgTxtHeaderProfiles)
-                    }, icon: {})
-                        .accessibility(identifier: A11y.settings.profiles.stgTxtHeaderProfiles)
-                }, content: {
-                    ForEach(store.profiles) { profile in
-                        WithPerceptionTracking {
-                            Button(action: {
-                                store.send(.editProfile(profile))
-                            }, label: {
-                                SingleProfileView(profile: profile, selectedProfileId: store.selectedProfileId)
-                            })
-                                .buttonStyle(.navigation)
-                                .accessibility(identifier: A11y.settings.profiles.stgBtnProfile)
-                        }
-                    }
-                    .accessibilityElement(children: .contain)
-                    .accessibility(identifier: A11y.settings.profiles.stgConProfiles)
-
+        SectionContainer(
+            header: {
+                Label(title: {
+                    Text(L10n.stgTxtHeaderProfiles)
+                }, icon: {})
+                    .accessibility(identifier: A11y.settings.profiles.stgTxtHeaderProfiles)
+            }, content: {
+                ForEach(store.profiles) { profile in
                     Button(action: {
-                        store.send(.addNewProfile)
+                        store.send(.editProfile(profile))
                     }, label: {
-                        Label(L10n.stgBtnAddProfile, systemImage: SFSymbolName.plus)
+                        SingleProfileView(profile: profile, selectedProfileId: store.selectedProfileId)
                     })
-                        .buttonStyle(.simple(showSeparator: false))
-                        .accessibility(identifier: A11y.settings.profiles.stgBtnNewProfile)
+                        .buttonStyle(.navigation)
+                        .accessibility(identifier: A11y.settings.profiles.stgBtnProfile)
                 }
-            )
-            .task {
-                await store.send(.registerListener).finish()
+
+                .accessibilityElement(children: .contain)
+                .accessibility(identifier: A11y.settings.profiles.stgConProfiles)
+
+                Button(action: {
+                    store.send(.addNewProfile)
+                }, label: {
+                    Label(L10n.stgBtnAddProfile, systemImage: SFSymbolName.plus)
+                })
+                    .buttonStyle(.simple(showSeparator: false))
+                    .accessibility(identifier: A11y.settings.profiles.stgBtnNewProfile)
             }
+        )
+        .task {
+            await store.send(.registerListener).finish()
         }
     }
 

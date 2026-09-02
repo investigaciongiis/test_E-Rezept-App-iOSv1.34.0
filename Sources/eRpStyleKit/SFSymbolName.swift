@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import SwiftUI
@@ -21,6 +25,14 @@ import SwiftUI
 // swiftlint:disable missing_docs
 
 public enum SFSymbolName {
+    public static var accessibility: String {
+        if #available(iOS 17.0, *) {
+            return "accessibility"
+        } else {
+            return "person.circle"
+        }
+    }
+
     public static let checkmark = "checkmark"
     public static let cardIcon = "creditcard"
     public static var cardIconAnd123 = "creditcard.and.123"
@@ -32,6 +44,7 @@ public enum SFSymbolName {
     public static let list = "list.dash"
     public static let message = "message"
     public static let textBubble = "text.bubble"
+    public static let textFormat123 = "textformat.123"
     public static let bubbleLeft = "bubble.left"
     public static let magnifyingGlasCircle = "magnifyingglass.circle"
     public static let magnifyingGlas = "magnifyingglass"
@@ -70,6 +83,7 @@ public enum SFSymbolName {
     public static let sliderHorizontal3 = "slider.horizontal.3"
     public static let refresh = "arrow.clockwise"
     public static let exclamationMark = "exclamationmark.triangle"
+    public static let wandAndRays = "wand.and.rays"
     public static let wandAndStars = "wand.and.stars"
     public static let waveformEcg = "waveform.path.ecg"
     public static let arrowRight = "arrow.right"
@@ -135,6 +149,15 @@ public enum SFSymbolName {
     public static let chevronForward = "chevron.forward"
     public static let chevronBackward = "chevron.backward"
     public static let lightbulb = "lightbulb"
+    public static var lightbulbMax: String {
+        if #available(iOS 17.0, *) {
+            return "lightbulb.max"
+        } else {
+            return "lightbulb"
+        }
+    }
+
+    public static let speakerWave2 = "speaker.wave.2"
     public static let lightbulbSlash = "lightbulb.slash"
     public static let questionmarkCircle = "questionmark.circle"
     public static let personCirclePlus = "person.crop.circle.badge.plus"
@@ -153,6 +176,9 @@ public enum SFSymbolName {
 
     public static let clockWarning = "clock.badge.exclamationmark"
     public static let iPhonelocked = "lock.iphone"
+    public static let iPhoneGen2 = "iphone.smartbatterycase.gen2"
+    public static let infoBubble = "info.bubble"
+    public static let archivebox = "archivebox"
 
     public static let hourglass = "hourglass"
     public static var euroSign: String {

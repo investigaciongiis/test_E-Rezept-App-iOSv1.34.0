@@ -132,12 +132,12 @@ final class MockPharmacyRemoteDataStore: PharmacyRemoteDataStore {
     var searchPharmaciesByPositionFilterCalled: Bool {
         searchPharmaciesByPositionFilterCallsCount > 0
     }
-    var searchPharmaciesByPositionFilterReceivedArguments: (searchTerm: String, position: Position?, filter: [String: String])?
-    var searchPharmaciesByPositionFilterReceivedInvocations: [(searchTerm: String, position: Position?, filter: [String: String])] = []
+    var searchPharmaciesByPositionFilterReceivedArguments: (searchTerm: String, position: Position?, filter: [PharmacyRemoteDataStoreFilter])?
+    var searchPharmaciesByPositionFilterReceivedInvocations: [(searchTerm: String, position: Position?, filter: [PharmacyRemoteDataStoreFilter])] = []
     var searchPharmaciesByPositionFilterReturnValue: AnyPublisher<[PharmacyLocation], PharmacyFHIRDataSource.Error>!
-    var searchPharmaciesByPositionFilterClosure: ((String, Position?, [String: String]) -> AnyPublisher<[PharmacyLocation], PharmacyFHIRDataSource.Error>)?
+    var searchPharmaciesByPositionFilterClosure: ((String, Position?, [PharmacyRemoteDataStoreFilter]) -> AnyPublisher<[PharmacyLocation], PharmacyFHIRDataSource.Error>)?
 
-    func searchPharmacies(by searchTerm: String, position: Position?, filter: [String: String]) -> AnyPublisher<[PharmacyLocation], PharmacyFHIRDataSource.Error> {
+    func searchPharmacies(by searchTerm: String, position: Position?, filter: [PharmacyRemoteDataStoreFilter]) -> AnyPublisher<[PharmacyLocation], PharmacyFHIRDataSource.Error> {
         searchPharmaciesByPositionFilterCallsCount += 1
         searchPharmaciesByPositionFilterReceivedArguments = (searchTerm: searchTerm, position: position, filter: filter)
         searchPharmaciesByPositionFilterReceivedInvocations.append((searchTerm: searchTerm, position: position, filter: filter))
@@ -178,5 +178,55 @@ final class MockPharmacyRemoteDataStore: PharmacyRemoteDataStore {
         loadAvsCertificatesForReceivedLocationId = locationId
         loadAvsCertificatesForReceivedInvocations.append(locationId)
         return loadAvsCertificatesForClosure.map({ $0(locationId) }) ?? loadAvsCertificatesForReturnValue
+    }
+    
+   // MARK: - apiFilters
+
+    var apiFiltersForCallsCount = 0
+    var apiFiltersForCalled: Bool {
+        apiFiltersForCallsCount > 0
+    }
+    var apiFiltersForReceivedFilter: [PharmacyRepositoryFilter]?
+    var apiFiltersForReceivedInvocations: [[PharmacyRepositoryFilter]] = []
+    var apiFiltersForReturnValue: [PharmacyRemoteDataStoreFilter]!
+    var apiFiltersForClosure: (([PharmacyRepositoryFilter]) -> [PharmacyRemoteDataStoreFilter])?
+
+    func apiFilters(for filter: [PharmacyRepositoryFilter]) -> [PharmacyRemoteDataStoreFilter] {
+        apiFiltersForCallsCount += 1
+        apiFiltersForReceivedFilter = filter
+        apiFiltersForReceivedInvocations.append(filter)
+        return apiFiltersForClosure.map({ $0(filter) }) ?? apiFiltersForReturnValue
+    }
+    
+   // MARK: - fetchInsurance
+
+    var fetchInsuranceByCallsCount = 0
+    var fetchInsuranceByCalled: Bool {
+        fetchInsuranceByCallsCount > 0
+    }
+    var fetchInsuranceByReceivedIkNumber: String?
+    var fetchInsuranceByReceivedInvocations: [String] = []
+    var fetchInsuranceByReturnValue: AnyPublisher<Insurance?, PharmacyFHIRDataSource.Error>!
+    var fetchInsuranceByClosure: ((String) -> AnyPublisher<Insurance?, PharmacyFHIRDataSource.Error>)?
+
+    func fetchInsurance(by ikNumber: String) -> AnyPublisher<Insurance?, PharmacyFHIRDataSource.Error> {
+        fetchInsuranceByCallsCount += 1
+        fetchInsuranceByReceivedIkNumber = ikNumber
+        fetchInsuranceByReceivedInvocations.append(ikNumber)
+        return fetchInsuranceByClosure.map({ $0(ikNumber) }) ?? fetchInsuranceByReturnValue
+    }
+    
+   // MARK: - fetchAllInsurances
+
+    var fetchAllInsurancesCallsCount = 0
+    var fetchAllInsurancesCalled: Bool {
+        fetchAllInsurancesCallsCount > 0
+    }
+    var fetchAllInsurancesReturnValue: AnyPublisher<[Insurance], PharmacyFHIRDataSource.Error>!
+    var fetchAllInsurancesClosure: (() -> AnyPublisher<[Insurance], PharmacyFHIRDataSource.Error>)?
+
+    func fetchAllInsurances() -> AnyPublisher<[Insurance], PharmacyFHIRDataSource.Error> {
+        fetchAllInsurancesCallsCount += 1
+        return fetchAllInsurancesClosure.map({ $0() }) ?? fetchAllInsurancesReturnValue
     }
 }

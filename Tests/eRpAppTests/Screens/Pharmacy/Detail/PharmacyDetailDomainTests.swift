@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
@@ -31,15 +35,25 @@ class PharmacyDetailDomainTests: XCTestCase {
     let testScheduler = DispatchQueue.immediate
     var mockUserSession: MockUserSession!
     var mockPharmacyRepository: MockPharmacyRepository!
+    var mockRedeemService: MockRedeemService!
     var mockFeedbackReceiver: MockFeedbackReceiver!
     var mockPrescriptionRepository: MockPrescriptionRepository!
 
     typealias TestStore = TestStoreOf<PharmacyDetailDomain>
 
+    override func invokeTest() {
+        withDependencies { dependencies in
+            dependencies.date.now = TestDate.defaultReferenceDate
+        } operation: {
+            super.invokeTest()
+        }
+    }
+
     override func setUp() {
         super.setUp()
         mockUserSession = MockUserSession()
         mockPharmacyRepository = MockPharmacyRepository()
+        mockRedeemService = MockRedeemService()
         mockFeedbackReceiver = MockFeedbackReceiver()
         mockPrescriptionRepository = MockPrescriptionRepository()
     }
@@ -53,6 +67,12 @@ class PharmacyDetailDomainTests: XCTestCase {
             dependencies.pharmacyRepository = mockPharmacyRepository
             dependencies.feedbackReceiver = mockFeedbackReceiver
             dependencies.prescriptionRepository = mockPrescriptionRepository
+            dependencies.redeemOrderService.redeemViaAVS = { @Sendable [mockRedeemService] orders in
+                try await mockRedeemService?.redeem(orders).async() ?? []
+            }
+            dependencies.redeemOrderService.redeemViaErxTaskRepository = { @Sendable [mockRedeemService] orders in
+                try await mockRedeemService?.redeem(orders).async() ?? []
+            }
             dependencies.date = DateGenerator.constant(Date.now)
             dependencies.calendar = Calendar.autoupdatingCurrent
         }
@@ -114,11 +134,11 @@ class PharmacyDetailDomainTests: XCTestCase {
         // Given a pharmacy with all avs and ErxTaskRepository services
         let pharmacyModel = allServicesPharmacy
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
             pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
+            availableServiceOptions: [.delivery]
         ))
 
         // and a profile that has been logged in before (== insuranceID non nil)
@@ -135,51 +155,51 @@ class PharmacyDetailDomainTests: XCTestCase {
             .eraseToAnyPublisher()
         let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
         let selectedOption = RedeemOption.delivery
-        let serviceOption = RedeemServiceOption.erxTaskRepository
+
         // When loading the profile
         await sut.send(.task) {
             // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
             // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
-        }
-
-        // Then redeem services for ErxTaskRepository can be used
-        await sut.receive(.response(.currentProfileReceived(profile))) {
-            $0.wasProfileAuthenticatedBefore = true
+            $0.$prescriptions.withLock { $0 = prescriptions }
+            $0.serviceOptionState.$prescriptions.withLock { $0 = prescriptions }
         }
 
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
             $0.hasRedeemableTasks = true
         }
 
-        await sut.receive(.response(.avsCertificatesReceived(.success([])))) {
-            $0.reservationService = serviceOption
-            $0.deliveryService = serviceOption
-            $0.shipmentService = serviceOption
-        }
-
-        await sut.send(.tappedRedeemOption(selectedOption)) {
-            $0.destination = .redeemViaErxTaskRepository(
-                .init(
-                    redeemOption: selectedOption,
-                    prescriptions: $0.$prescriptions,
-                    pharmacy: $0.pharmacyViewModel.pharmacyLocation,
-                    selectedPrescriptions: Shared([])
+        await sut
+            .receive(.response(.redeemOptionProviderReceived(RedeemOptionProvider(
+                wasAuthenticatedBefore: true,
+                pharmacy: pharmacyModel.pharmacyLocation
+            )))) {
+                $0.serviceOptionState.availableOptions = [.delivery, .onPremise, .shipment]
+                $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                    wasAuthenticatedBefore: true,
+                    pharmacy: pharmacyModel.pharmacyLocation
                 )
-            )
-        }
+            }
+
+        await sut.send(.serviceOption(.redeemOptionTapped(selectedOption)))
+
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: selectedOption
+        )))
     }
 
     func testRedeemFlowWithAProfileThatHasNotBeenLoggedInBeforeAndAPharmacyWithAVSService() async {
         // Given a pharmacy with all avs and ErxTaskRepository services
         var pharmacyModel = allServicesPharmacy
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
             pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
+            availableServiceOptions: [.shipment]
         ))
         // and a profile that has never been logged in before (== insuranceID is nil)
         let profile = Profile(name: "Test", insuranceId: nil, erxTasks: ErxTask.Fixtures.erxTasks)
@@ -196,49 +216,49 @@ class PharmacyDetailDomainTests: XCTestCase {
         let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
 
         let selectedOption = RedeemOption.shipment
-        let serviceOption = RedeemServiceOption.avs
+
         // When loading the profile
         await sut.send(.task) {
             // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
             // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
+            $0.serviceOptionState.$prescriptions.withLock { $0 = prescriptions }
         }
-        // Then only redeem services for `avs` should be available
-        await sut.receive(.response(.currentProfileReceived(profile)))
 
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
             $0.hasRedeemableTasks = true
         }
 
-        await sut.receive(.response(.avsCertificatesReceived(.success(expectedCertResponse)))) {
-            $0.reservationService = serviceOption
-            $0.deliveryService = serviceOption
-            $0.shipmentService = serviceOption
-            $0.pharmacyViewModel.pharmacyLocation.avsCertificates = expectedCertResponse
-        }
         pharmacyModel.pharmacyLocation.avsCertificates = [derCert]
-
-        await sut.send(.tappedRedeemOption(selectedOption)) {
-            $0.destination = .redeemViaAVS(
-                .init(
-                    redeemOption: selectedOption,
-                    prescriptions: $0.$prescriptions,
-                    pharmacy: $0.pharmacyViewModel.pharmacyLocation,
-                    selectedPrescriptions: Shared([])
-                )
+        await sut.receive(.response(.redeemOptionProviderReceived(
+            RedeemOptionProvider(wasAuthenticatedBefore: false, pharmacy: pharmacyModel.pharmacyLocation)
+        ))) {
+            $0.serviceOptionState.availableOptions = [.delivery, .onPremise, .shipment]
+            $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                wasAuthenticatedBefore: false,
+                pharmacy: pharmacyModel.pharmacyLocation
             )
         }
+
+        await sut.send(.serviceOption(.redeemOptionTapped(selectedOption)))
+
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: allServicesPharmacy.pharmacyLocation,
+            option: selectedOption
+        )))
     }
 
     func testRedeemFlowWithAProfileThatHasNotBeenLoggedInBeforeAndAPharmacyWithAVSServiceAndMissingCerts() async {
         // Given a pharmacy with all avs and ErxTaskRepository services
+        let pharmacyModel = allServicesPharmacy
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: allServicesPharmacy,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: pharmacyModel
         ))
         // and a profile that has never been logged in before (== insuranceID is nil)
         let profile = Profile(name: "Test", insuranceId: nil, erxTasks: ErxTask.Fixtures.erxTasks)
@@ -254,48 +274,48 @@ class PharmacyDetailDomainTests: XCTestCase {
             .eraseToAnyPublisher()
         let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
         let selectedOption = RedeemOption.onPremise
-        let serviceOption = RedeemServiceOption.erxTaskRepositoryAvailable
 
         // When loading the profile
         await sut.send(.task) {
             // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
             // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
+            $0.serviceOptionState.$prescriptions.withLock { $0 = prescriptions }
         }
         // Then only redeem services for `avs` should be available
-        await sut.receive(.response(.currentProfileReceived(profile)))
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
             $0.hasRedeemableTasks = true
         }
 
-        await sut.receive(.response(.avsCertificatesReceived(.success([])))) {
-            $0.reservationService = serviceOption
-            $0.deliveryService = serviceOption
-            $0.shipmentService = serviceOption
-        }
-
-        await sut.send(.tappedRedeemOption(selectedOption)) {
-            $0.destination = .redeemViaErxTaskRepository(
-                .init(
-                    redeemOption: selectedOption,
-                    prescriptions: $0.$prescriptions,
-                    pharmacy: $0.pharmacyViewModel.pharmacyLocation,
-                    selectedPrescriptions: Shared([])
-                )
+        await sut.receive(.response(.redeemOptionProviderReceived(
+            RedeemOptionProvider(wasAuthenticatedBefore: false, pharmacy: pharmacyModel.pharmacyLocation)
+        ))) {
+            $0.serviceOptionState.availableOptions = [.onPremise, .delivery, .shipment]
+            $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                wasAuthenticatedBefore: false,
+                pharmacy: pharmacyModel.pharmacyLocation
             )
         }
+
+        await sut.send(.serviceOption(.redeemOptionTapped(selectedOption)))
+
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: allServicesPharmacy.pharmacyLocation,
+            option: selectedOption
+        )))
     }
 
     func testRedeemFlowWithAProfileThatHasNotBeenLoggedInAndAPharmacyWithoutAVS() async {
         // Given a pharmacy with only ErxTaskRepository services
         let pharmacyModel = PharmacyLocationViewModel.Dummies.pharmacy
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: pharmacyModel
         ))
         // and a profile that has never been logged in before (== insuranceID is nil)
         let profile = Profile(name: "Test", insuranceId: nil, erxTasks: ErxTask.Fixtures.erxTasks)
@@ -308,46 +328,47 @@ class PharmacyDetailDomainTests: XCTestCase {
             .eraseToAnyPublisher()
         let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
         let selectedOption = RedeemOption.onPremise
-        let serviceOption = RedeemServiceOption.erxTaskRepositoryAvailable
         // When loading the profile
         await sut.send(.task) {
             // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
             // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
+            $0.serviceOptionState.$prescriptions.withLock { $0 = prescriptions }
         }
         // Then only redeem services for ErxTaskRepository should be available (after login)
-        await sut.receive(.response(.currentProfileReceived(profile))) {
-            $0.reservationService = serviceOption
-            $0.deliveryService = serviceOption
-            $0.shipmentService = serviceOption
-        }
-
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
             $0.hasRedeemableTasks = true
         }
 
-        await sut.send(.tappedRedeemOption(selectedOption)) {
-            $0.destination = .redeemViaErxTaskRepository(
-                .init(
-                    redeemOption: selectedOption,
-                    prescriptions: $0.$prescriptions,
-                    pharmacy: $0.pharmacyViewModel.pharmacyLocation,
-                    selectedPrescriptions: Shared([])
-                )
+        await sut.receive(.response(.redeemOptionProviderReceived(
+            RedeemOptionProvider(wasAuthenticatedBefore: false, pharmacy: pharmacyModel.pharmacyLocation)
+        ))) {
+            $0.serviceOptionState.availableOptions = [.onPremise, .delivery, .shipment]
+            $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                wasAuthenticatedBefore: false,
+                pharmacy: pharmacyModel.pharmacyLocation
             )
         }
+
+        await sut.send(.serviceOption(.redeemOptionTapped(selectedOption)))
+
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: selectedOption
+        )))
     }
 
     func testRedeemOptionWithPharmacyWithoutServicesAndNotLoggedInBefore() async {
         // Given a pharmacy without any services
         let pharmacyModel = noServicePharmacy
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: pharmacyModel
         ))
         // and a profile that has never been logged in before (== insuranceID is nil)
         let profile = Profile(name: "Test", insuranceId: nil, erxTasks: ErxTask.Fixtures.erxTasks)
@@ -362,31 +383,56 @@ class PharmacyDetailDomainTests: XCTestCase {
         await sut.send(.task) {
             // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
             // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
+            $0.serviceOptionState.$prescriptions.withLock { $0 = prescriptions }
         }
         // then no state change occurs (default is no service)
-        await sut.receive(.response(.currentProfileReceived(profile)))
-
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
             $0.hasRedeemableTasks = true
         }
 
+        await sut.receive(.response(.redeemOptionProviderReceived(
+            RedeemOptionProvider(wasAuthenticatedBefore: false, pharmacy: pharmacyModel.pharmacyLocation)
+        ))) {
+            $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                wasAuthenticatedBefore: false,
+                pharmacy: pharmacyModel.pharmacyLocation
+            )
+        }
+
         // then redeem does not present something
-        await sut.send(.tappedRedeemOption(.onPremise))
-        await sut.send(.tappedRedeemOption(.shipment))
-        await sut.send(.tappedRedeemOption(.delivery))
+        await sut.send(.serviceOption(.redeemOptionTapped(.onPremise)))
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: .onPremise
+        )))
+        await sut.send(.serviceOption(.redeemOptionTapped(.shipment)))
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: .shipment
+        )))
+        await sut.send(.serviceOption(.redeemOptionTapped(.delivery)))
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: .delivery
+        )))
     }
 
     func testRedeemOptionWithPharmacyWithoutServicesAndLoggedInBefore() async {
         // Given a pharmacy without any services
         let pharmacyModel = noServicePharmacy
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: pharmacyModel
         ))
         // and a profile that has been logged in before (== insuranceID not nil)
         let profile = Profile(name: "Test", insuranceId: "loggedIn", erxTasks: ErxTask.Fixtures.erxTasks)
@@ -401,207 +447,54 @@ class PharmacyDetailDomainTests: XCTestCase {
         await sut.send(.task) {
             // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
             // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
+            $0.serviceOptionState.$prescriptions.withLock { $0 = prescriptions }
         }
         // then no state change occurs (default is no service)
-        await sut.receive(.response(.currentProfileReceived(profile))) {
-            $0.wasProfileAuthenticatedBefore = true
-        }
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
             $0.hasRedeemableTasks = true
+        }
+
+        await sut.receive(.response(.redeemOptionProviderReceived(
+            RedeemOptionProvider(wasAuthenticatedBefore: true, pharmacy: pharmacyModel.pharmacyLocation)
+        ))) {
+            $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                wasAuthenticatedBefore: true,
+                pharmacy: pharmacyModel.pharmacyLocation
+            )
         }
 
         // then redeem does not present something
-        await sut.send(.tappedRedeemOption(.onPremise))
-        await sut.send(.tappedRedeemOption(.shipment))
-        await sut.send(.tappedRedeemOption(.delivery))
-    }
-
-    func testRedeemOptionWithAPharmacyOfSomeAVSServicesAndLoggedInBefore() async {
-        // Given a pharmacy with all avs and ErxTaskRepository services
-        let pharmacyModel = mixedServicesPharmacy
-        let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
-            inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
-        ))
-        // and a profile that has been logged in before (== insuranceID is not nil)
-        let profile = Profile(name: "Test", insuranceId: "loggedIn")
-        mockUserSession.profileReturnValue = Just(profile)
-            .setFailureType(to: LocalStoreError.self)
-            .eraseToAnyPublisher()
-        let expectedCertResponse = [derCert]
-        mockPharmacyRepository.loadAvsCertificatesForReturnValue = Just(expectedCertResponse)
-            .setFailureType(to: PharmacyRepositoryError.self)
-            .eraseToAnyPublisher()
-        let prescriptions = Prescription.Fixtures.prescriptions.filter(\.isRedeemable)
-        mockPrescriptionRepository.loadLocalReturnValue = Just(prescriptions)
-            .setFailureType(to: PrescriptionRepositoryError.self)
-            .eraseToAnyPublisher()
-        let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
-        // When loading the profile
-        await sut.send(.task) {
-            // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
-            // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
-        }
-        // Then the redeem services for `avs` should overwrite ti services
-        await sut.receive(.response(.currentProfileReceived(profile))) {
-            $0.wasProfileAuthenticatedBefore = true
-        }
-
-        await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
-            $0.hasRedeemableTasks = true
-        }
-
-        await sut.receive(.response(.avsCertificatesReceived(.success(expectedCertResponse)))) {
-            $0.reservationService = .noService
-            $0.deliveryService = .noService
-            $0.shipmentService = .erxTaskRepository
-            $0.pharmacyViewModel.pharmacyLocation.avsCertificates = expectedCertResponse
-        }
-    }
-
-    func testRedeemOptionWithAPharmacyOfSomeAVSServicesAndNotLoggedInBefore() async {
-        // Given a pharmacy with all avs and ErxTaskRepository services
-        let pharmacyModel = mixedServicesPharmacy
-        let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
-            inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
-        ))
-        // and a profile that has not been logged in before (== insuranceID is nil)
-        let profile = Profile(name: "Test", insuranceId: nil)
-        mockUserSession.profileReturnValue = Just(profile)
-            .setFailureType(to: LocalStoreError.self)
-            .eraseToAnyPublisher()
-        let expectedCertResponse = [derCert]
-        mockPharmacyRepository.loadAvsCertificatesForReturnValue = Just(expectedCertResponse)
-            .setFailureType(to: PharmacyRepositoryError.self)
-            .eraseToAnyPublisher()
-        let prescriptions = Prescription.Fixtures.prescriptions.filter(\.isRedeemable)
-        mockPrescriptionRepository.loadLocalReturnValue = Just(prescriptions)
-            .setFailureType(to: PrescriptionRepositoryError.self)
-            .eraseToAnyPublisher()
-        let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
-        // When loading the profile
-        await sut.send(.task) {
-            // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
-            // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
-        }
-        // Then the redeem services for `avs` should overwrite ti services
-        await sut.receive(.response(.currentProfileReceived(profile)))
-
-        await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
-            $0.hasRedeemableTasks = true
-        }
-
-        await sut.receive(.response(.avsCertificatesReceived(.success(expectedCertResponse)))) {
-            $0.reservationService = .noService
-            $0.deliveryService = .noService
-            $0.shipmentService = .avs
-            $0.pharmacyViewModel.pharmacyLocation.avsCertificates = expectedCertResponse
-        }
-    }
-
-    func testRedeemOptionWithoutAVSServicesAndLoggedInBefore() async {
-        // Given a pharmacy with all ErxTaskRepository and no avs services
-        let pharmacyModel = noAVSServicesPharmacy
-        let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
-            inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
-        ))
-        // and a profile that has been logged in before (== insuranceID is not nil)
-        let profile = Profile(name: "Test", insuranceId: "loggedIn")
-        mockUserSession.profileReturnValue = Just(profile)
-            .setFailureType(to: LocalStoreError.self)
-            .eraseToAnyPublisher()
-        mockPharmacyRepository.loadAvsCertificatesForReturnValue = Just([])
-            .setFailureType(to: PharmacyRepositoryError.self)
-            .eraseToAnyPublisher()
-        let prescriptions = Prescription.Fixtures.prescriptions.filter(\.isRedeemable)
-        mockPrescriptionRepository.loadLocalReturnValue = Just(prescriptions)
-            .setFailureType(to: PrescriptionRepositoryError.self)
-            .eraseToAnyPublisher()
-        let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
-        // When loading the profile
-        await sut.send(.task) {
-            // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
-            // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
-        }
-        // Then the redeem services should be the one from the repository
-        await sut.receive(.response(.currentProfileReceived(profile))) {
-            $0.wasProfileAuthenticatedBefore = true
-            $0.reservationService = .erxTaskRepository
-            $0.deliveryService = .erxTaskRepository
-            $0.shipmentService = .erxTaskRepository
-        }
-        await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
-            $0.hasRedeemableTasks = true
-        }
-    }
-
-    func testRedeemOptionWithoutAVSServicesAndNotLoggedInBefore() async {
-        // Given a pharmacy with all ErxTaskRepository and no avs services
-        let pharmacyModel = noAVSServicesPharmacy
-        let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
-            inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
-        ))
-        // and a profile that has not been logged in before (== insuranceID is nil)
-        let profile = Profile(name: "Test", insuranceId: nil)
-        mockUserSession.profileReturnValue = Just(profile)
-            .setFailureType(to: LocalStoreError.self)
-            .eraseToAnyPublisher()
-        mockPharmacyRepository.loadAvsCertificatesForReturnValue = Just([])
-            .setFailureType(to: PharmacyRepositoryError.self)
-            .eraseToAnyPublisher()
-        let prescriptions = Prescription.Fixtures.prescriptions.filter(\.isRedeemable)
-        mockPrescriptionRepository.loadLocalReturnValue = Just(prescriptions)
-            .setFailureType(to: PrescriptionRepositoryError.self)
-            .eraseToAnyPublisher()
-        let expected: Result<[Prescription], PrescriptionRepositoryError> = .success(prescriptions)
-        // When loading the profile
-        await sut.send(.task) {
-            // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
-            // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
-        }
-        // Then the redeem services should be the one from the repository
-        await sut.receive(.response(.currentProfileReceived(profile))) {
-            $0.reservationService = .erxTaskRepositoryAvailable
-            $0.deliveryService = .erxTaskRepositoryAvailable
-            $0.shipmentService = .erxTaskRepositoryAvailable
-        }
-        await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
-            $0.hasRedeemableTasks = true
-        }
+        await sut.send(.serviceOption(.redeemOptionTapped(.onPremise)))
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: .onPremise
+        )))
+        await sut.send(.serviceOption(.redeemOptionTapped(.shipment)))
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: .shipment
+        )))
+        await sut.send(.serviceOption(.redeemOptionTapped(.delivery)))
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: [],
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: .delivery
+        )))
     }
 
     func testTogglingFavoriteState_Success() async {
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyA,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyA
         ))
 
         mockPharmacyRepository.savePharmaciesReturnValue = Just(true).setFailureType(to: PharmacyRepositoryError.self)
@@ -629,11 +522,10 @@ class PharmacyDetailDomainTests: XCTestCase {
 
     func testSetFavoriteStateTrue() async {
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyA,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyA
         ))
 
         mockPharmacyRepository.savePharmaciesReturnValue = Just(true).setFailureType(to: PharmacyRepositoryError.self)
@@ -663,11 +555,10 @@ class PharmacyDetailDomainTests: XCTestCase {
 
     func testTogglingFavoriteState_Failure() async {
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyA,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: PharmacyLocationViewModel.Fixtures.pharmacyA
         ))
 
         let expectedError = PharmacyRepositoryError
@@ -689,11 +580,10 @@ class PharmacyDetailDomainTests: XCTestCase {
         // Given a pharmacy without any services
         let pharmacyModel = noServicePharmacy
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared([]),
-            selectedPrescriptions: Shared([]),
+            prescriptions: Shared(value: []),
+            selectedPrescriptions: Shared(value: []),
             inRedeemProcess: false,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: pharmacyModel
         ))
         // and a profile that has been logged in before (== insuranceID not nil)
         let profile = Profile(name: "Test", insuranceId: nil)
@@ -706,10 +596,18 @@ class PharmacyDetailDomainTests: XCTestCase {
         let expected: Result<[Prescription], PrescriptionRepositoryError> = .success([])
         await sut.send(.task)
         // then no state change occurs (default is no service)
-        await sut.receive(.response(.currentProfileReceived(profile)))
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))
-        // then redeem does not present soemthing
-        await sut.send(.tappedRedeemOption(.onPremise)) {
+        // then redeem does not present something
+        await sut.receive(.response(.redeemOptionProviderReceived(
+            RedeemOptionProvider(wasAuthenticatedBefore: false, pharmacy: pharmacyModel.pharmacyLocation)
+        ))) {
+            $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                wasAuthenticatedBefore: false,
+                pharmacy: pharmacyModel.pharmacyLocation
+            )
+        }
+        await sut.send(.serviceOption(.redeemOptionTapped(.onPremise))) {
+            $0.serviceOptionState.selectedOption = .onPremise
             $0.destination = .toast(PharmacyDetailDomain.ToastStates.noErxTask)
         }
     }
@@ -721,11 +619,10 @@ class PharmacyDetailDomainTests: XCTestCase {
             // Given a pharmacy with all avs and ErxTaskRepository services
             let pharmacyModel = allServicesPharmacy
             let sut = testStore(for: PharmacyDetailDomain.State(
-                prescriptions: Shared([]),
-                selectedPrescriptions: Shared([]),
+                prescriptions: Shared(value: []),
+                selectedPrescriptions: Shared(value: []),
                 inRedeemProcess: false,
-                pharmacyViewModel: pharmacyModel,
-                pharmacyRedeemState: Shared(nil)
+                pharmacyViewModel: pharmacyModel
             ))
 
             // and a profile that has been logged in before (== insuranceID non nil)
@@ -738,11 +635,24 @@ class PharmacyDetailDomainTests: XCTestCase {
                 .eraseToAnyPublisher()
 
             let expectedPrescription = Prescription(erxTask: ErxTask.Fixtures.erxTask1,
+                                                    date: TestDate.defaultReferenceDate,
                                                     dateFormatter: UIDateFormatter.testValue)
             let nonReadyPrescriptions = [
-                Prescription(erxTask: ErxTask.Fixtures.erxTask9, dateFormatter: UIDateFormatter.testValue),
-                Prescription(erxTask: ErxTask.Fixtures.erxTask10, dateFormatter: UIDateFormatter.testValue),
-                Prescription(erxTask: ErxTask.Fixtures.erxTask11, dateFormatter: UIDateFormatter.testValue),
+                Prescription(
+                    erxTask: ErxTask.Fixtures.erxTask9,
+                    date: TestDate.defaultReferenceDate,
+                    dateFormatter: UIDateFormatter.testValue
+                ),
+                Prescription(
+                    erxTask: ErxTask.Fixtures.erxTask10,
+                    date: TestDate.defaultReferenceDate,
+                    dateFormatter: UIDateFormatter.testValue
+                ),
+                Prescription(
+                    erxTask: ErxTask.Fixtures.erxTask11,
+                    date: TestDate.defaultReferenceDate,
+                    dateFormatter: UIDateFormatter.testValue
+                ),
             ]
 
             let prescriptions = nonReadyPrescriptions + [expectedPrescription]
@@ -753,20 +663,23 @@ class PharmacyDetailDomainTests: XCTestCase {
             await sut.send(.task) {
                 // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`
                 // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-                $0.prescriptions = [expectedPrescription]
+                $0.$prescriptions.withLock { $0 = [expectedPrescription] }
+                $0.serviceOptionState.$prescriptions.withLock { $0 = [expectedPrescription] }
             }
 
-            await sut.receive(.response(.currentProfileReceived(profile)))
-
             await sut.receive(.response(.loadLocalPrescriptionsReceived(.success(prescriptions)))) {
-                $0.prescriptions = [expectedPrescription]
+                $0.$prescriptions.withLock { $0 = [expectedPrescription] }
                 $0.hasRedeemableTasks = true
             }
 
-            await sut.receive(.response(.avsCertificatesReceived(.success([])))) {
-                $0.reservationService = .erxTaskRepositoryAvailable
-                $0.deliveryService = .erxTaskRepositoryAvailable
-                $0.shipmentService = .erxTaskRepositoryAvailable
+            await sut.receive(.response(.redeemOptionProviderReceived(
+                RedeemOptionProvider(wasAuthenticatedBefore: false, pharmacy: pharmacyModel.pharmacyLocation)
+            ))) {
+                $0.serviceOptionState.availableOptions = [.onPremise, .delivery, .shipment]
+                $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                    wasAuthenticatedBefore: false,
+                    pharmacy: pharmacyModel.pharmacyLocation
+                )
             }
         }
     }
@@ -774,12 +687,12 @@ class PharmacyDetailDomainTests: XCTestCase {
     func testInRedeemProcessWithSelectedPrescription() async {
         // Given a pharmacy with all avs and ErxTaskRepository services
         let pharmacyModel = allServicesPharmacy
+        let selectedPrescriptions = [Prescription.Dummies.prescriptionMVO]
         let sut = testStore(for: PharmacyDetailDomain.State(
-            prescriptions: Shared<[Prescription]>([]),
-            selectedPrescriptions: Shared([Prescription.Dummies.prescriptionMVO]),
+            prescriptions: Shared<[Prescription]>(value: []),
+            selectedPrescriptions: Shared(value: selectedPrescriptions),
             inRedeemProcess: true,
-            pharmacyViewModel: pharmacyModel,
-            pharmacyRedeemState: Shared(nil)
+            pharmacyViewModel: pharmacyModel
         ))
 
         let profile = Profile(name: "Test")
@@ -799,27 +712,32 @@ class PharmacyDetailDomainTests: XCTestCase {
         await sut.send(.task) {
             // technically this should happen on `sut.receive(.response(.loadLocalPrescriptionsReceived(expected)))`,
             // due to shared state the test snapshot is wrong here, this might get fixed within TCA in the future?
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
+            $0.serviceOptionState.$prescriptions.withLock { $0 = prescriptions }
         }
 
-        await sut.receive(.response(.currentProfileReceived(profile)))
-
         await sut.receive(.response(.loadLocalPrescriptionsReceived(expected))) {
-            $0.prescriptions = prescriptions
+            $0.$prescriptions.withLock { $0 = prescriptions }
             $0.hasRedeemableTasks = true
         }
 
-        await sut.receive(.response(.avsCertificatesReceived(.success([])))) {
-            $0.reservationService = .erxTaskRepositoryAvailable
-            $0.deliveryService = .erxTaskRepositoryAvailable
-            $0.shipmentService = .erxTaskRepositoryAvailable
+        await sut.receive(.response(.redeemOptionProviderReceived(
+            RedeemOptionProvider(wasAuthenticatedBefore: false, pharmacy: pharmacyModel.pharmacyLocation)
+        ))) {
+            $0.serviceOptionState.availableOptions = [.delivery, .onPremise, .shipment]
+            $0.serviceOptionState.redeemOptionProvider = RedeemOptionProvider(
+                wasAuthenticatedBefore: false,
+                pharmacy: pharmacyModel.pharmacyLocation
+            )
         }
 
-        await sut.send(.tappedRedeemOption(.delivery)) {
-            $0.destination = .redeemViaErxTaskRepository(.init(redeemOption: .delivery,
-                                                               prescriptions: $0.$prescriptions,
-                                                               pharmacy: pharmacyModel.pharmacyLocation,
-                                                               selectedPrescriptions: Shared($0.selectedPrescriptions)))
-        }
+        await sut.send(.serviceOption(.redeemOptionTapped(.delivery)))
+
+        await sut.receive(.delegate(.redeem(
+            prescriptions: prescriptions,
+            selectedPrescriptions: selectedPrescriptions,
+            pharmacy: pharmacyModel.pharmacyLocation,
+            option: .delivery
+        )))
     }
 }

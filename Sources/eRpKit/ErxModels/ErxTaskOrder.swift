@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Foundation
@@ -26,28 +30,32 @@ public struct ErxTaskOrder: Equatable, Codable {
     public let erxTaskId: String
     /// Access Code of the prescription
     public let accessCode: String
-    /// Identifier of the pharmacy where order will be issued
-    public let pharmacyTelematikId: String
-    /// Contains informations about the user and the selected redeem option
-    public let payload: Payload
+    /// Identifier of the organization where order will be issued
+    public let telematikId: String
+    /// FlowType describes type of task (e.G. Direktzuweisung).
+    public var flowType: String
+    /// Contains informations about the user and the selected redeem option (optional for flowtype 162)
+    public let payload: Payload?
 
     /// Default initializer to instantiate an ErxTask order.
     /// - Parameters:
     ///   - identifier: `ErxTaskOrder` identifier
     ///   - erxTaskId: Id of the ErxTask to order
     ///   - accessCode: AccessCode of the prescription that should be redeemed
-    ///   - pharmacyTelematikId: Telematik-ID for the pharmacy in which the order will be placed
+    ///   - telematikId: Telematik-ID for the organization in which the order will be placed
     ///   - payloadJSON: Informations about the users address and the selected redeem option
     public init(identifier: String,
                 erxTaskId: String,
                 accessCode: String,
-                pharmacyTelematikId: String,
-                payload: Payload) {
+                telematikId: String,
+                flowType: String,
+                payload: Payload? = nil) {
         self.identifier = identifier
         self.payload = payload
         self.erxTaskId = erxTaskId
         self.accessCode = accessCode
-        self.pharmacyTelematikId = pharmacyTelematikId
+        self.telematikId = telematikId
+        self.flowType = flowType
     }
 
     public struct Payload: Codable, Equatable {
@@ -113,7 +121,7 @@ public struct Address: Codable, Equatable {
 }
 
 extension ErxTaskOrder {
-    // sourcery: CodedError = "206"
+    // sourcery: CodedError = "208"
     public enum Error: Swift.Error {
         // sourcery: errorCode = "01"
         /// Unable to construct communication request
@@ -124,7 +132,7 @@ extension ErxTaskOrder {
     }
 }
 
-public enum RedeemOption: String, Codable, Equatable, CaseIterable, Sendable {
+public enum RedeemOption: String, Codable, Hashable, CaseIterable, Sendable {
     case onPremise
     case delivery
     case shipment

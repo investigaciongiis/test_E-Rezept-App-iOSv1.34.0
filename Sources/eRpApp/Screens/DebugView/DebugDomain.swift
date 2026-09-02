@@ -1,24 +1,30 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import Combine
 import ComposableArchitecture
 import eRpKit
+import eRpRemoteStorage
+import FHIRVZD
 import Foundation
 import IDP
 
@@ -30,6 +36,12 @@ struct DebugDomain {
         var trackingOptIn: Bool
 
         #if ENABLE_DEBUG_VIEW
+        @Shared(.showDebugPharmacies) var showDebugPharmacies
+        @Shared(.fhirVZDToken) var fhirVZDToken
+        @Shared(.overwriteDIGAIK) var overwriteDIGAIK
+        @Shared(.appDefaults) var appDefaults
+        @Shared(.useWorkflow15ForSendingCommunications) var useWorkflow15: Bool
+
         var localTasks: [ErxTask] = []
         var hideOnboarding = true
 
@@ -111,6 +123,7 @@ struct DebugDomain {
         case setServerEnvironment(String?)
         case showAlert(Bool)
         case resetAlertText
+        case resetAppDefaults
         case appear
         case resetTooltips
         case logAction(action: DebugLogsDomain.Action)
@@ -335,6 +348,9 @@ struct DebugDomain {
             userSession.trustStoreSession.reset()
             userSession.secureUserStore.set(discovery: nil)
 
+            @Shared(.fhirVZDToken) var token
+            $token.withLock { $0 = nil }
+
             localUserStore.set(serverEnvironmentConfiguration: name)
             return .none
         case .binding(\.trackingOptIn):
@@ -382,6 +398,9 @@ struct DebugDomain {
             return setHidePkvConsentDrawerOnMainView(to: newValue, profileId: profile.id)
         case .resetTooltips:
             UserDefaults.standard.setValue([String: Any](), forKey: "TOOLTIPS")
+            return .none
+        case .resetAppDefaults:
+            state.$appDefaults.withLock { $0 = AppDefaults() }
             return .none
         case let .tokenReceived(token):
             state.token = token

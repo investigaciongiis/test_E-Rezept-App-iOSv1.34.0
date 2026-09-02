@@ -1,19 +1,24 @@
+// swiftlint:disable file_length
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import ComposableArchitecture
@@ -22,9 +27,10 @@ import eRpStyleKit
 import Perception
 import Pharmacy
 import SwiftUI
+import SwiftUIIntrospect
 
 struct PharmacyRedeemView: View {
-    @Perception.Bindable var store: StoreOf<PharmacyRedeemDomain>
+    @Bindable var store: StoreOf<PharmacyRedeemDomain>
     static let height: CGFloat = {
         // Compensate display scaling (Settings -> Display & Brightness -> Display -> Standard vs. Zoomed
         // 245 is the standard height for the gif Display
@@ -36,125 +42,115 @@ struct PharmacyRedeemView: View {
     }
 
     var body: some View {
-        WithPerceptionTracking {
-            VStack {
-                ScrollView {
-                    HStack(alignment: .top, spacing: 0) {
-                        if let url = videoURLforSource(store.redeemOption) {
-                            LoopingVideoPlayerContainerView(withURL: url)
-                                .frame(maxWidth: nil, maxHeight: Self.height)
-                                .scaledToFill()
-                        }
+        VStack {
+            ScrollView {
+                HStack(alignment: .top, spacing: 0) {
+                    if let redeemOption = store.serviceOptionState.selectedOption,
+                       let url = videoURLforSource(redeemOption) {
+                        LoopingVideoPlayerContainerView(withURL: url)
+                            .frame(maxWidth: nil, maxHeight: Self.height)
+                            .scaledToFill()
                     }
-                    .cornerRadius(32, corners: [.bottomLeft, .bottomRight])
+                }
+                .cornerRadius(32, corners: [.bottomLeft, .bottomRight])
 
-                    VStack {
-                        Text(L10n.phaRedeemTxtHeader)
-                            .font(Font.title.bold())
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                VStack {
+                    Text(L10n.phaRedeemTxtHeader)
+                        .font(Font.title.bold())
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                        .padding(.top)
+                        .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtTitle)
+
+                    PrescriptionView(store: store)
+
+                    PharmacyView(pharmacy: store.pharmacy) {
+                        store.send(.delegate(.changePharmacy))
+                    }
+
+                    if store.pharmacy != nil {
+                        ServiceOptionView(store: store.scope(
+                            state: \.serviceOptionState,
+                            action: \.serviceOption
+                        ))
                             .padding(.horizontal)
-                            .padding(.top)
-                            .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtTitle)
+                    }
 
-                        PharmacyView(pharmacy: store.pharmacy) {
-                            store.send(.delegate(.changePharmacy(store.state)))
+                    if let shipmentInfo = store.selectedShipmentInfo {
+                        AddressView(
+                            shipmentInfo: shipmentInfo,
+                            redeemOption: store.serviceOptionState.selectedOption,
+                            hasCompleteContactData: store.hasCompleteContactData,
+                            profile: store.profile
+                        ) { store.send(.showContact) }
+                    } else {
+                        MissingAddressView(profile: store.profile) {
+                            store.send(.showContact)
                         }
-
-                        if let shipmentInfo = store.selectedShipmentInfo {
-                            AddressView(
-                                shipmentInfo: shipmentInfo,
-                                redeemOption: store.redeemOption,
-                                profile: store.profile
-                            ) {
-                                store.send(.showContact)
-                            }
-                        } else {
-                            MissingAddressView(profile: store.profile) {
-                                store.send(.showContact)
-                            }
-                        }
-                        PrescriptionView(store: store)
                     }
                 }
-                .navigationDestination(
-                    item: $store.scope(
-                        state: \.destination?.redeemSuccess,
-                        action: \.destination.redeemSuccess
-                    )
-                ) { store in
-                    RedeemSuccessView(store: store)
-                }
-                .navigationDestination(
-                    item: $store.scope(
-                        state: \.destination?.prescriptionSelection,
-                        action: \.destination.prescriptionSelection
-                    )
-                ) { store in
-                    PharmacyPrescriptionSelectionView(store: store)
-                }
-
-                Rectangle()
-                    .frame(width: 0, height: 0, alignment: .center)
-                    .fullScreenCover(item: $store.scope(
-                        state: \.destination?.cardWall,
-                        action: \.destination.cardWall
-                    )) { store in
-                        CardWallIntroductionView(store: store)
-                    }
-                    .accessibility(hidden: true)
-
-                Rectangle()
-                    .frame(width: 0, height: 0, alignment: .center)
-                    .fullScreenCover(item: $store.scope(
-                        state: \.destination?.contact,
-                        action: \.destination.contact
-                    )) { store in
-                        PharmacyContactView(store: store)
-                    }
-                    .accessibility(hidden: true)
-
-                Spacer()
-
-                RedeemButton(store: store)
             }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: {
-                        store.send(.delegate(.closeRedeemView))
-                    }, label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: SFSymbolName.back)
-                                .font(.body.bold())
-                                .padding(0)
-                                .foregroundColor(Colors.primary600)
-                            Text(L10n.cdwBtnRcHelpBack)
-                                .font(.body)
-                                .foregroundColor(Colors.primary600)
-                                .padding(0)
-                        }
-                    })
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationBarCloseItem { store.send(.delegate(.close)) }
-                }
+            .navigationDestination(
+                item: $store.scope(
+                    state: \.destination?.redeemSuccess,
+                    action: \.destination.redeemSuccess
+                )
+            ) { store in
+                RedeemSuccessView(store: store)
+            }
+            .navigationDestination(
+                item: $store.scope(
+                    state: \.destination?.contact,
+                    action: \.destination.contact
+                )
+            ) { store in
+                PharmacyContactView(store: store)
+            }
+            .navigationDestination(
+                item: $store.scope(
+                    state: \.destination?.prescriptionSelection,
+                    action: \.destination.prescriptionSelection
+                )
+            ) { store in
+                PharmacyPrescriptionSelectionView(store: store)
             }
             .alert($store.scope(
                 state: \.destination?.alert?.alert,
                 action: \.destination.alert
             ))
-            .task {
-                await store.send(.task).finish()
-            }
-            .navigationBarBackButtonHidden(true)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarBackground(Colors.gifBackground, for: .navigationBar)
+
+            Rectangle()
+                .frame(width: 0, height: 0, alignment: .center)
+                .fullScreenCover(item: $store.scope(
+                    state: \.destination?.cardWall,
+                    action: \.destination.cardWall
+                )) { store in
+                    CardWallIntroductionView(store: store)
+                }
+                .accessibility(hidden: true)
+
+            Spacer()
+
+            RedeemButton(store: store)
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationBarCloseItem { store.send(.delegate(.close)) }
+            }
+        }
+        .task {
+            await store.send(.task).finish()
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible)
+        .toolbarBackground(
+            store.serviceOptionState.selectedOption != nil ? Colors.gifBackground : Colors.systemBackground,
+            for: .navigationBar
+        )
     }
 
     private func videoURLforSource(_ option: RedeemOption) -> URL? {
         var videoName = ""
-
         switch option {
         case .onPremise:
             videoName = "animation_reservierung"
@@ -163,12 +159,8 @@ struct PharmacyRedeemView: View {
         case .shipment:
             videoName = "animation_versand"
         }
-
-        guard let bundle = Bundle.module.path(forResource: videoName,
-                                              ofType: "mp4") else {
-            return nil
-        }
-
+        guard let bundle = Bundle.module.path(forResource: videoName, ofType: "mp4")
+        else { return nil }
         return URL(fileURLWithPath: bundle)
     }
 }
@@ -198,7 +190,6 @@ extension PharmacyRedeemView {
                         .padding(.bottom)
                         .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemBtnAddAddress)
                 }
-
             })
                 .sectionContainerStyle(.bordered)
         }
@@ -273,7 +264,8 @@ extension PharmacyRedeemView {
 
     struct AddressView: View {
         let shipmentInfo: ShipmentInfo
-        let redeemOption: RedeemOption
+        let redeemOption: RedeemOption?
+        let hasCompleteContactData: Bool
         let profile: Profile?
         let action: () -> Void
 
@@ -356,8 +348,10 @@ extension PharmacyRedeemView {
                                 }
                                 .fixedSize(horizontal: false, vertical: true)
                             }
-                            if shipmentInfo.phone == nil, redeemOption.isPhoneRequired {
-                                Text(L10n.phaRedeemTxtMissingPhone)
+                            .contentShape(Rectangle())
+
+                            if !hasCompleteContactData, redeemOption != nil {
+                                Text(L10n.phaRedeemTxtMissingContactData)
                                     .font(Font.body.weight(.semibold))
                                     .frame(maxWidth: .infinity, minHeight: 52, alignment: .center)
                                     .background(Colors.red100)
@@ -377,102 +371,119 @@ extension PharmacyRedeemView {
     }
 
     struct PrescriptionView: View {
-        @Perception.Bindable var store: StoreOf<PharmacyRedeemDomain>
+        @Bindable var store: StoreOf<PharmacyRedeemDomain>
 
         var body: some View {
-            WithPerceptionTracking {
-                SingleElementSectionContainer(
-                    header: {
-                        Label(L10n.phaRedeemTxtPrescription)
-                            .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtPrescriptionTitle)
-                    },
-                    content: {
-                        if !store.selectedPrescriptions.isEmpty {
-                            Button(action: {
-                                store.send(.showPrescriptionSelection)
-                            }, label: {
-                                HStack(spacing: 0) {
-                                    VStack(alignment: .leading) {
-                                        Text(
-                                            "\(store.selectedPrescriptions.count) " +
-                                                L10n.phaRedeemTxtPrescription.text
-                                        )
-                                        .font(Font.body)
-                                        .padding(.bottom)
-                                        .foregroundColor(Colors.systemLabel)
+            SingleElementSectionContainer(
+                header: {
+                    Label(L10n.phaRedeemTxtPrescription)
+                        .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtPrescriptionTitle)
+                },
+                content: {
+                    if !store.selectedPrescriptions.isEmpty {
+                        Button(action: {
+                            store.send(.showPrescriptionSelection)
+                        }, label: {
+                            HStack(spacing: 0) {
+                                VStack(alignment: .leading) {
+                                    Text(
+                                        "\(store.selectedPrescriptions.count) " +
+                                            L10n.phaRedeemTxtPrescription.text
+                                    )
+                                    .font(Font.body)
+                                    .padding(.bottom)
+                                    .foregroundColor(Colors.systemLabel)
 
-                                        Text(store.selectedPrescriptions.map(\.title).joined(separator: " & "))
-                                            .font(Font.subheadline)
-                                            .foregroundColor(Colors.systemLabelSecondary)
-                                            .lineLimit(1)
-                                    }
-                                    .multilineTextAlignment(.leading)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    Text(L10n.phaRedeemBtnChangePrescription)
-                                        .font(Font.subheadline.weight(.semibold))
-                                        .multilineTextAlignment(.trailing)
-                                        .fixedSize(horizontal: true, vertical: false)
-                                        .padding(.leading)
-                                        .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtEditPrescription)
+                                    Text(store.selectedPrescriptions.map(\.title).joined(separator: " & "))
+                                        .font(Font.subheadline)
+                                        .foregroundColor(Colors.systemLabelSecondary)
+                                        .lineLimit(1)
                                 }
-                                .padding()
-                            })
-                                .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemBtnEditPrescription)
-                        } else {
-                            VStack(spacing: 16) {
-                                Text(L10n.phaRedeemTxtSelectPrescription)
-                                    .padding(.top)
-                                    .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtAddPrescription)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, alignment: .leading)
 
-                                Button(L10n.phaRedeemBtnSelectPrescription) {
-                                    store.send(.showPrescriptionSelection)
-                                }
-                                .buttonStyle(.secondaryAlt)
-                                .padding(.bottom)
-                                .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemBtnAddPrescription)
+                                Text(L10n.phaRedeemBtnChangePrescription)
+                                    .font(Font.subheadline.weight(.semibold))
+                                    .multilineTextAlignment(.trailing)
+                                    .fixedSize(horizontal: true, vertical: false)
+                                    .padding(.leading)
+                                    .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtEditPrescription)
                             }
+                            .padding()
+                        })
+                            .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemBtnEditPrescription)
+                    } else {
+                        VStack(spacing: 16) {
+                            Text(L10n.phaRedeemTxtSelectPrescription)
+                                .padding(.top)
+                                .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemTxtAddPrescription)
+
+                            Button(L10n.phaRedeemBtnSelectPrescription) {
+                                store.send(.showPrescriptionSelection)
+                            }
+                            .buttonStyle(.secondaryAlt)
+                            .padding(.bottom)
+                            .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemBtnAddPrescription)
                         }
                     }
-                )
-                .sectionContainerStyle(.bordered)
-            }
+                }
+            )
+            .sectionContainerStyle(.bordered)
         }
     }
 
     struct RedeemButton: View {
-        @Perception.Bindable var store: StoreOf<PharmacyRedeemDomain>
+        @Bindable var store: StoreOf<PharmacyRedeemDomain>
         var body: some View {
-            WithPerceptionTracking {
-                VStack(spacing: 8) {
-                    GreyDivider()
+            VStack(spacing: 8) {
+                GreyDivider()
 
-                    SelfPayerWarningView(erxTasks: store.selectedPrescriptions.map(\.erxTask))
-                        .padding()
+                SelfPayerWarningView(erxTasks: store.selectedPrescriptions.map(\.erxTask))
+                    .padding()
 
-                    if store.selectedPrescriptions.isEmpty {
-                        PrimaryTextButton(text: L10n.phaRedeemBtnRedeem,
-                                          a11y: A11y.pharmacyRedeem.phaRedeemBtnRedeem,
-                                          isEnabled: !store.selectedPrescriptions.isEmpty) {
-                            store.send(.redeem)
-                        }
-                        .padding(.horizontal)
-                    } else {
-                        LoadingPrimaryButton(text: L10n.phaRedeemBtnRedeem,
-                                             isLoading: store.orderResponses.inProgress || store.redeemInProgress) {
-                            store.send(.redeem)
-                        }
-                        .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemBtnRedeem)
-                        .padding(.horizontal)
+                if !store.readyToRedeem {
+                    PrimaryTextButton(text: L10n.phaRedeemBtnRedeem,
+                                      a11y: A11y.pharmacyRedeem.phaRedeemBtnRedeem,
+                                      isEnabled: store.readyToRedeem) {
+                        store.send(.redeem)
                     }
-                }.padding(.bottom)
-            }
+                    .padding(.horizontal)
+                    .accessibilityDisabledReason(
+                        reasonIfDisabled: store.state.accessibilityDisabledReason,
+                        isDisabled: !store.readyToRedeem
+                    )
+                } else {
+                    LoadingPrimaryButton(text: L10n.phaRedeemBtnRedeem,
+                                         isLoading: store.orderResponses.inProgress || store.redeemInProgress) {
+                        store.send(.redeem)
+                    }
+                    .accessibility(identifier: A11y.pharmacyRedeem.phaRedeemBtnRedeem)
+                    .padding(.horizontal)
+                }
+            }.padding(.bottom)
         }
     }
 }
 
+private struct DisabledButtonWithReason: ViewModifier {
+    let reasonIfDisabled: String
+    let isDisabled: Bool
+
+    func body(content: Content) -> some View {
+        if isDisabled {
+            content.accessibility(value: Text(reasonIfDisabled))
+        }
+    }
+}
+
+extension View {
+    func accessibilityDisabledReason(reasonIfDisabled: String, isDisabled: Bool) -> some View {
+        modifier(DisabledButtonWithReason(reasonIfDisabled: reasonIfDisabled, isDisabled: isDisabled))
+    }
+}
+
 extension RedeemOption {
-    var isPhoneRequired: Bool {
+    var isContactDataRequired: Bool {
         switch self {
         case .onPremise: return false
         case .delivery, .shipment: return true

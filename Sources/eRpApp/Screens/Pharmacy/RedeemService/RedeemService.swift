@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import AVS
@@ -28,6 +32,8 @@ import Pharmacy
 
 protocol RedeemService {
     func redeem(_ orders: [OrderRequest]) -> AnyPublisher<IdentifiedArrayOf<OrderResponse>, RedeemServiceError>
+    func redeemDiGa(_ orders: [OrderDiGaRequest])
+        -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError>
 }
 
 struct RedeemServiceDependency: DependencyKey {
@@ -77,49 +83,65 @@ struct AVSRedeemService: RedeemService {
 
         let redeemMessagePublishers: [AnyPublisher<OrderResponse, Never>] =
             orderAndMessages.map { order, message -> AnyPublisher<OrderResponse, Never> in
-                avsSession.redeem(message: message, endpoint: endpoint.asEndpoint(), recipients: recipients)
-                    .mapError { RedeemServiceError.from($0) }
-                    .flatMap { avsSessionResponse -> AnyPublisher<OrderResponse, RedeemServiceError> in
-                        let httpStatusCode = avsSessionResponse.httpStatusCode
-                        guard 200 ..< 300 ~= httpStatusCode else {
-                            return Fail(error: .from(RedeemServiceError.InternalError.unexpectedHTTPStatusCode))
-                                .eraseToAnyPublisher()
-                        }
-                        let orderResponse = OrderResponse(requested: order, result: .success(true))
-                        return avsTransactionDataStore.save(
-                            avsTransaction: .init(
-                                transactionID: order.transactionID,
-                                httpStatusCode: Int32(httpStatusCode),
-                                groupedRedeemTime: groupedRedeemTime,
-                                groupedRedeemID: order.orderID,
-                                telematikID: order.telematikId,
-                                taskId: order.taskID
-                            )
-                        )
-                        .map { _ in orderResponse }
-                        .mapError { .from(RedeemServiceError.InternalError.localStoreError($0)) }
-                        .eraseToAnyPublisher()
+
+                Future {
+                    try await avsSession.redeem(
+                        message: message,
+                        endpoint: endpoint.asEndpoint(),
+                        recipients: recipients
+                    )
+                }
+                .mapError { RedeemServiceError.from($0) }
+                .flatMap { avsSessionResponse -> AnyPublisher<OrderResponse, RedeemServiceError> in
+                    let httpStatusCode = avsSessionResponse.httpStatusCode
+                    guard 200 ..< 300 ~= httpStatusCode else {
+                        return Fail(error: .from(RedeemServiceError.InternalError.unexpectedHTTPStatusCode))
+                            .eraseToAnyPublisher()
                     }
-                    .catch { error -> AnyPublisher<OrderResponse, Never> in // erase the RedeemServiceError to Never
-                        Just(
-                            OrderResponse(requested: order, result: .failure(error))
+                    let orderResponse = OrderResponse(requested: order, result: .success(true))
+                    return avsTransactionDataStore.save(
+                        avsTransaction: .init(
+                            transactionID: order.transactionID,
+                            httpStatusCode: Int32(httpStatusCode),
+                            groupedRedeemTime: groupedRedeemTime,
+                            groupedRedeemID: order.orderID,
+                            telematikID: order.telematikId,
+                            taskId: order.taskID
                         )
-                        .eraseToAnyPublisher()
-                    }
+                    )
+                    .map { _ in orderResponse }
+                    .mapError { .from(RedeemServiceError.InternalError.localStoreError($0)) }
                     .eraseToAnyPublisher()
+                }
+                .catch { error -> AnyPublisher<OrderResponse, Never> in // erase the RedeemServiceError to Never
+                    Just(
+                        OrderResponse(requested: order, result: .failure(error))
+                    )
+                    .eraseToAnyPublisher()
+                }
+                .eraseToAnyPublisher()
             }
 
+        // Collects all order responses and merges them into a single emit of the publisher
         return Publishers.MergeMany(redeemMessagePublishers)
-            .setFailureType(to: RedeemServiceError.self)
-            .tryMap { response in
-                guard let index = responses.firstIndex(where: { $0.id == response.id }) else {
-                    throw RedeemServiceError.InternalError.idMissmatch
+            .collect(redeemMessagePublishers.count)
+            .tryMap { collection in
+                var responseCollection: IdentifiedArrayOf<OrderResponse> = []
+                try collection.forEach { response in
+                    guard let index = responses.firstIndex(where: { $0.id == response.id }) else {
+                        throw RedeemServiceError.InternalError.idMissmatch
+                    }
+                    responses.update(response, at: index)
+                    responses.forEach { responseCollection.updateOrAppend($0) }
                 }
-                responses.update(response, at: index)
-                return responses
+                return responseCollection
             }
             .mapError(RedeemServiceError.from)
             .eraseToAnyPublisher()
+    }
+
+    func redeemDiGa(_: [OrderDiGaRequest]) -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError> {
+        Fail(error: RedeemServiceError.internalError(.missingAVSEndpoint)).eraseToAnyPublisher()
     }
 }
 
@@ -176,6 +198,27 @@ struct ErxTaskRepositoryRedeemService: RedeemService {
             .eraseToAnyPublisher()
     }
 
+    func redeemDiGa(_ orders: [OrderDiGaRequest])
+        -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError> {
+        loginHandler
+            .isAuthenticatedOrAuthenticate()
+            .first()
+            .flatMap { authenticated -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError> in
+                // [REQ:gemSpec_eRp_FdV:A_20167-02#3,A_20172] no token/not authorized, show authenticator module
+                if Result.success(false) == authenticated {
+                    return Fail(error: RedeemServiceError.noTokenAvailable).eraseToAnyPublisher()
+                }
+                if case let Result.failure(error) = authenticated {
+                    return Fail(error: RedeemServiceError.loginHandler(error: error)).eraseToAnyPublisher()
+                } else {
+                    return redeemViaRepositoryDiGa(orders: orders)
+                        .mapError(RedeemServiceError.from)
+                        .eraseToAnyPublisher()
+                }
+            }
+            .eraseToAnyPublisher()
+    }
+
     func checkAndRedeemViaRepository(
         orders: [OrderRequest]
     ) -> AnyPublisher<IdentifiedArrayOf<OrderResponse>, RedeemServiceError> {
@@ -196,7 +239,7 @@ struct ErxTaskRepositoryRedeemService: RedeemService {
                         )
                     }
 
-                let notRedeemablePrescriptions = updatedTasks.filter { !$0.isRedeemable }
+                let notRedeemablePrescriptions = updatedTasks.filter { !$0.isPharmacyRedeemable }
                 guard notRedeemablePrescriptions.isEmpty else {
                     return Fail<IdentifiedArrayOf<OrderResponse>, RedeemServiceError>(
                         error: RedeemServiceError.prescriptionAlreadyRedeemed(notRedeemablePrescriptions)
@@ -242,14 +285,71 @@ struct ErxTaskRepositoryRedeemService: RedeemService {
                     .eraseToAnyPublisher()
             }
 
+        // Collects all order responses and merges them into a single emit of the publisher
         return Publishers.MergeMany(redeemErxTaskPublishers)
+            .collect(redeemErxTaskPublishers.count)
             .setFailureType(to: RedeemServiceError.self)
-            .tryMap { response in
-                guard let index = responses.firstIndex(where: { $0.id == response.id }) else {
-                    throw RedeemServiceError.InternalError.idMissmatch
+            .tryMap { collection in
+                var responseCollection: IdentifiedArrayOf<OrderResponse> = []
+                try collection.forEach { response in
+                    guard let index = responses.firstIndex(where: { $0.id == response.id }) else {
+                        throw RedeemServiceError.InternalError.idMissmatch
+                    }
+                    responses.update(response, at: index)
+                    responses.forEach { responseCollection.updateOrAppend($0) }
                 }
-                responses.update(response, at: index)
-                return responses
+                return responseCollection
+            }
+            .eraseToAnyPublisher()
+    }
+
+    func redeemViaRepositoryDiGa(
+        orders: [OrderDiGaRequest]
+    ) -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, Swift.Error> {
+        var erxTaskOrders = [(ErxTaskOrder, OrderDiGaRequest)]()
+        var responses: IdentifiedArrayOf<OrderDiGaResponse> = []
+        for order in orders {
+            do {
+                let erxTaskOrder = try ErxTaskOrder(order)
+                erxTaskOrders.append((erxTaskOrder, order))
+            } catch {
+                return Fail(error: error).eraseToAnyPublisher()
+            }
+            responses.append(OrderDiGaResponse(requested: order, result: .progress(.loading)))
+        }
+
+        let redeemErxTaskPublishers: [AnyPublisher<OrderDiGaResponse, Never>] =
+            erxTaskOrders.map { erxTaskOrder, order in
+                erxTaskRepository.redeem(order: erxTaskOrder)
+                    .map { _ in
+                        OrderDiGaResponse(requested: order, result: .success(true))
+                    }
+                    .catch { error in
+                        Just(
+                            OrderDiGaResponse(
+                                requested: order,
+                                result: .failure(RedeemServiceError.eRxRepository(error))
+                            )
+                        )
+                        .eraseToAnyPublisher()
+                    }
+                    .eraseToAnyPublisher()
+            }
+
+        // Collects all order responses and merges them into a single emit of the publisher
+        return Publishers.MergeMany(redeemErxTaskPublishers)
+            .collect(redeemErxTaskPublishers.count)
+            .setFailureType(to: RedeemServiceError.self)
+            .tryMap { collection in
+                var responseCollection: IdentifiedArrayOf<OrderDiGaResponse> = []
+                try collection.forEach { response in
+                    guard let index = responses.firstIndex(where: { $0.id == response.id }) else {
+                        throw RedeemServiceError.InternalError.idMissmatch
+                    }
+                    responses.update(response, at: index)
+                    responses.forEach { responseCollection.updateOrAppend($0) }
+                }
+                return responseCollection
             }
             .eraseToAnyPublisher()
     }
@@ -285,6 +385,15 @@ struct DemoRedeemService: RedeemService {
         var responses = IdentifiedArrayOf<OrderResponse>()
         for order in orders {
             responses.append(OrderResponse(requested: order, result: .success(true)))
+        }
+        return Just(responses).setFailureType(to: RedeemServiceError.self).eraseToAnyPublisher()
+    }
+
+    func redeemDiGa(_ orders: [OrderDiGaRequest])
+        -> AnyPublisher<IdentifiedArrayOf<OrderDiGaResponse>, RedeemServiceError> {
+        var responses = IdentifiedArrayOf<OrderDiGaResponse>()
+        for order in orders {
+            responses.append(OrderDiGaResponse(requested: order, result: .success(true)))
         }
         return Just(responses).setFailureType(to: RedeemServiceError.self).eraseToAnyPublisher()
     }

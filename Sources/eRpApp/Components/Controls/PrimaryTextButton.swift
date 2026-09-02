@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import eRpStyleKit
@@ -25,12 +29,12 @@ struct PrimaryTextButton: View {
     var a11y: String
     var image: Image?
     var isEnabled = true
+    var useFullWidth = true
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack {
-                Spacer()
                 if let image = image {
                     image.foregroundColor(.white)
                 }
@@ -39,14 +43,13 @@ struct PrimaryTextButton: View {
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundColor(isEnabled ? Color(.white) : Color(.systemGray))
-                    .padding()
                     .fixedSize(horizontal: false, vertical: true)
-                Spacer()
             }
+            .padding(.vertical)
+            .padding(.horizontal, useFullWidth ? 16 : 64)
         }
-        .buttonStyle(PrimaryButtonStyle(enabled: isEnabled))
+        .buttonStyle(PrimaryButtonStyle(enabled: isEnabled, fullWidth: useFullWidth))
         .accessibility(identifier: a11y)
-        .if(!isEnabled) { $0.accessibility(value: Text(L10n.buttonTxtIsInactiveValue)) }
         .disabled(!isEnabled)
     }
 }
@@ -129,16 +132,40 @@ struct LoadingPrimaryButton: View {
     }
 }
 
+/// sourcery: StringAssetInitialized
+struct NavButton: View {
+    var text: LocalizedStringKey
+    var a11y: String
+    let back: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Image(systemName: SFSymbolName.chevronBackward)
+                    .hidden(!back)
+                Text(text, bundle: .module)
+                Image(systemName: SFSymbolName.chevronForward)
+                    .hidden(back)
+            }
+        }.foregroundColor(Colors.primary700)
+            .font(.body.weight(.semibold))
+            .accessibility(identifier: a11y)
+    }
+}
+
 struct PrimaryButtonStyle: ButtonStyle {
     private var isEnabled: Bool
+    private var useFullWidth: Bool
 
-    init(enabled: Bool = true) {
+    init(enabled: Bool = true, fullWidth: Bool = true) {
         isEnabled = enabled
+        useFullWidth = fullWidth
     }
 
     func makeBody(configuration: Self.Configuration) -> some View {
         configuration.label
-            .frame(minWidth: 0, maxWidth: .infinity)
+            .frame(minWidth: 0, maxWidth: useFullWidth ? .infinity : nil)
             .opacity(configuration.isPressed ? 0.25 : 1)
             .background(isEnabled ? Colors.primary : Color(.systemGray4))
             .cornerRadius(16)

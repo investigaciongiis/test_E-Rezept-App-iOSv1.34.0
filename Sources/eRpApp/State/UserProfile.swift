@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import eRpKit
@@ -29,6 +33,7 @@ struct UserProfile: ProfileCellModel, Equatable, Identifiable {
     var fullName: String? { profile.fullName }
     var insurance: String? { profile.insurance }
     var insuranceId: String? { profile.insuranceId }
+    var insuranceIK: String? { profile.insuranceIK }
 
     var image: ProfilePicture { profile.image.viewModelPicture }
     var userImageData: Data? { profile.userImageData }
@@ -83,7 +88,8 @@ extension UserProfile {
             let elements = ssoToken.split(separator: 0x2E, omittingEmptySubsequences: false)
             if let header = elements.first,
                let decodedHeader = Data(base64Encoded: header),
-               let tokenHeader = try? JSONDecoder().decode(SSOTokenHeader.self, from: decodedHeader),
+               // dateDecodingStrategy for SSOTokenHeader needs to be .secondsSince1970
+               let tokenHeader = try? JSONDecoder.base1970DateDecoder.decode(SSOTokenHeader.self, from: decodedHeader),
                tokenHeader.exp?.compare(Date()) == .orderedDescending {
                 return .connected
             }
@@ -109,6 +115,7 @@ extension UserProfile {
                 familyName: "Doe",
                 insurance: "Spooky BKK",
                 insuranceId: "X112233445",
+                insuranceIK: "AB123CD",
                 color: .blue,
                 lastAuthenticated: Date().addingTimeInterval(-60 * 8),
                 erxTasks: []

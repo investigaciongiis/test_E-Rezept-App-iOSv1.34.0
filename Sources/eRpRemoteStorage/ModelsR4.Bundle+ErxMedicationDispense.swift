@@ -1,19 +1,23 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import eRpKit
@@ -62,6 +66,10 @@ extension ModelsR4.Bundle {
             erxEpaMedication = nil
         }
 
+        let diGaDispense: DiGaDispense? = .init(redeemCode: medicationDispense.redeemCode,
+                                                deepLink: medicationDispense.deepLink,
+                                                isMissingData: medicationDispense.isMissingData)
+
         return .init(
             identifier: identifier,
             taskId: taskId,
@@ -72,7 +80,8 @@ extension ModelsR4.Bundle {
             quantity: medicationDispense.erxTaskQuantity,
             noteText: medicationDispense.noteText,
             medication: erxMedication,
-            epaMedication: erxEpaMedication
+            epaMedication: erxEpaMedication,
+            diGaDispense: diGaDispense
         )
     }
 
@@ -155,6 +164,47 @@ extension ModelsR4.MedicationDispense {
         case .codeableConcept: return nil
         case let .reference(reference):
             return reference
+        }
+    }
+
+    // MARK: DiGa dispense info
+
+    var redeemCode: String? {
+        `extension`?.first {
+            $0.url.value?.url.absoluteString == ErpPrescription.Key.DeviceRequest.redeemCode
+        }
+        .flatMap {
+            if let valueX = $0.value,
+               case let Extension.ValueX.string(fhirString) = valueX {
+                return fhirString.value?.string
+            }
+            return nil
+        }
+    }
+
+    var deepLink: String? {
+        `extension`?.first {
+            $0.url.value?.url.absoluteString == ErpPrescription.Key.DeviceRequest.deepLink
+        }
+        .flatMap {
+            if let valueX = $0.value,
+               case let Extension.ValueX.uri(fhirUrl) = valueX {
+                return fhirUrl.value?.url.absoluteString
+            }
+            return nil
+        }
+    }
+
+    var isMissingData: Bool? {
+        medicationReference?.extension?.first {
+            $0.url.value?.url.absoluteString == "http://hl7.org/fhir/StructureDefinition/data-absent-reason"
+        }
+        .flatMap {
+            if let valueX = $0.value,
+               case Extension.ValueX.code("asked-declined") = valueX {
+                return true
+            }
+            return false
         }
     }
 }

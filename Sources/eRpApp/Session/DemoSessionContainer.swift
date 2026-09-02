@@ -1,28 +1,35 @@
 //
-//  Copyright (c) 2024 gematik GmbH
+//  Copyright (Change Date see Readme), gematik GmbH
 //
-//  Licensed under the EUPL, Version 1.2 or – as soon they will be approved by
-//  the European Commission - subsequent versions of the EUPL (the Licence);
+//  Licensed under the EUPL, Version 1.2 or - as soon they will be approved by the
+//  European Commission – subsequent versions of the EUPL (the "Licence").
 //  You may not use this work except in compliance with the Licence.
-//  You may obtain a copy of the Licence at:
 //
-//      https://joinup.ec.europa.eu/software/page/eupl
+//  You find a copy of the Licence in the "Licence" file or at
+//  https://joinup.ec.europa.eu/collection/eupl/eupl-text-eupl-12
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the Licence is distributed on an "AS IS" basis,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the Licence for the specific language governing permissions and
-//  limitations under the Licence.
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the Licence is distributed on an "AS IS" basis,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either expressed or implied.
+//  In case of changes by gematik find details in the "Readme" file.
 //
+//  See the Licence for the specific language governing permissions and limitations under the Licence.
+//
+//  *******
+//
+// For additional notes and disclaimer from gematik and in case of changes by gematik find details in the "Readme" file.
 //
 
 import AVS
+import BfArM
 import Combine
 import eRpKit
 import eRpLocalStorage
 import FHIRClient
+import FHIRVZD
 import Foundation
 import HTTPClient
+import HTTPClientLive
 import IDP
 import Pharmacy
 import TrustStore
@@ -87,13 +94,23 @@ class DemoSessionContainer: UserSession {
         DefaultNFCResetRetryCounterController()
     }()
 
+    lazy var bfarmSession: BfArMSession = {
+        let appConfiguration = UserDefaultsStore().appConfiguration
+
+        return BfArMSession(fetchBfArMInfo: { _ in nil }, fetchCachedImage: { _ in nil })
+    }()
+
     lazy var pharmacyRepository: PharmacyRepository = {
         let appConfiguration = UserDefaultsStore().appConfiguration
         let interceptors: [Interceptor] = [
-            AdditionalHeaderInterceptor(additionalHeader: appConfiguration.apoVzdAdditionalHeader),
+            AdditionalHeaderInterceptor(additionalHeader: appConfiguration.fhirVzdAdditionalHeader),
             LoggingInterceptor(log: .body), // Logging interceptor (DEBUG ONLY)
             DebugLiveLogger.LogInterceptor(),
         ]
+
+        let fhirVZDConfig = FHIRVZDClient.Configuration(eRezeptAPIServer: appConfiguration.eRezept,
+                                                        eRezeptAdditionalHeader: appConfiguration
+                                                            .eRezeptAdditionalHeader)
 
         // Remote FHIR data source configuration
         let client = DefaultHTTPClient(
@@ -101,11 +118,12 @@ class DemoSessionContainer: UserSession {
             interceptors: interceptors
         )
         return DemoPharmacyRepository(
-            cloud: PharmacyFHIRDataSource(
+            cloud: HealthcareServiceFHIRDataSource(
                 fhirClient: FHIRClient(
-                    server: appConfiguration.apoVzd,
+                    server: appConfiguration.fhirVzd,
                     httpClient: client
-                )
+                ),
+                session: DefaultFHIRVZDSession(config: fhirVZDConfig)
             ),
             requestDelayInSeconds: 0.9,
             schedulers: Schedulers()
