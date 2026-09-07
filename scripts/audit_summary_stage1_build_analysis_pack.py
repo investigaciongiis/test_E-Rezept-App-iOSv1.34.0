@@ -215,7 +215,17 @@ def _to_declarative(desc: str) -> str:
 
     if t.lower().startswith("application "):
         t = "The " + t
-    elif not t.lower().startswith("the application"):
+    elif t.lower().startswith("app must "):
+        t = "The application must " + t[len("App must "):]
+    elif t.lower().startswith("applications must "):
+        t = "Applications must " + t[len("Applications must "):]
+    elif t.lower().startswith("production builds must "):
+        pass
+    elif t.lower().startswith(("the application", "the mobile application", "the mobile health application", "mobile applications must ", "sensitive data must ")):
+        pass
+    elif t.lower().startswith("ensure "):
+        t = "The application must ensure " + t[len("Ensure "):]
+    else:
         if t:
             t = "The application must " + t[0].lower() + t[1:]
         else:
@@ -260,6 +270,8 @@ def main() -> None:
     col_result = _find_col(cols, [r"\bresult\b", r"\bstatus\b", r"\bcumple\b"])
     col_flags = _find_col(cols, [r"\bflags\b"])
     col_evid = _find_col(cols, [r"justif", r"evid", r"\bevidence\b"])
+    col_basis = _find_col(cols, [r"determination basis", r"assessment basis"])
+    col_na_reason = _find_col(cols, [r"n/a reason", r"scope reason"])
 
     missing = [("id (PUID)", col_puid), ("Description", col_desc), ("Result/Status", col_result), ("Flags", col_flags)]
     missing = [name for name, col in missing if col is None]
@@ -271,20 +283,31 @@ def main() -> None:
     df["Description"] = df[col_desc].astype(str)
     df["Flags"] = df[col_flags].astype(str).fillna("").str.strip()
     df["Evidence"] = df[col_evid].astype(str).fillna("").str.strip() if col_evid else ""
+    df["NAReason"] = df[col_na_reason].astype(str).fillna("").str.strip() if col_na_reason else ""
 
     df["Status"] = df[col_result].apply(_norm_status)
-    df["DeterminationBasis"] = df.apply(
-        lambda r: (
-            "evidenced_noncompliance"
-            if r["Status"] == "Non-compliant" and "contradicting signals:" in str(r["Evidence"]).lower()
-            else "evidence_not_found"
-            if r["Status"] == "Non-compliant"
-            else "supporting_evidence"
-            if r["Status"] == "Compliant"
-            else "not_applicable"
-        ),
-        axis=1,
-    )
+    if col_basis:
+        basis_aliases = {
+            "insufficient_evidence": "evidence_not_found",
+            "not_applicable_capability": "not_applicable",
+            "not_applicable_functionality": "not_applicable",
+        }
+        df["DeterminationBasis"] = df[col_basis].astype(str).str.strip().str.lower().map(
+            lambda value: basis_aliases.get(value, value)
+        )
+    else:
+        df["DeterminationBasis"] = df.apply(
+            lambda r: (
+                "evidenced_noncompliance"
+                if r["Status"] == "Non-compliant" and "contradicting signals:" in str(r["Evidence"]).lower()
+                else "evidence_not_found"
+                if r["Status"] == "Non-compliant"
+                else "supporting_evidence"
+                if r["Status"] == "Compliant"
+                else "not_applicable"
+            ),
+            axis=1,
+        )
     df["CategoryCode"] = df["PUID"].apply(lambda x: _cat_from_puid(x)["code"])
     df["CategoryName"] = df["PUID"].apply(lambda x: _cat_from_puid(x)["name"])
 
@@ -294,8 +317,28 @@ def main() -> None:
     evidenced_non_compliant = int((df["DeterminationBasis"] == "evidenced_noncompliance").sum())
     evidence_not_found = int((df["DeterminationBasis"] == "evidence_not_found").sum())
     not_applicable = int((df["Status"] == "Not applicable").sum())
+    na_rows = df[df["Status"] == "Not applicable"]
+    dynamic_na = int(na_rows["NAReason"].str.contains("dynamic iOS analysis", case=False, na=False).sum())
+    signed_ipa_na = int(na_rows["NAReason"].str.contains("signed production IPA", case=False, na=False).sum())
+    backend_na = int(na_rows["NAReason"].str.contains("backend or server-side evidence", case=False, na=False).sum())
+    organizational_na = int(na_rows["NAReason"].str.contains("organizational policy", case=False, na=False).sum())
+    manual_na = int(na_rows["NAReason"].str.contains("manual verification", case=False, na=False).sum())
+    other_na = int(not_applicable - len(na_rows[
+        na_rows["NAReason"].str.contains(
+            "dynamic iOS analysis|signed production IPA|backend or server-side evidence|organizational policy|manual verification",
+            case=False,
+            na=False,
+        )
+    ]))
     applicable = int(compliant + non_compliant)
     overall_compliance_pct = float((compliant / applicable * 100.0) if applicable else 0.0)
+    conclusive_determinations = int(compliant + evidenced_non_compliant)
+    conclusive_evidence_coverage_pct = float(
+        (conclusive_determinations / applicable * 100.0) if applicable else 0.0
+    )
+    conservative_determination_pct = float(
+        (evidence_not_found / applicable * 100.0) if applicable else 0.0
+    )
 
     # Category metrics for charts (not for narrative dumps)
     grp = df.groupby(["CategoryCode", "CategoryName", "Status"]).size().reset_index(name="count")
@@ -377,6 +420,8 @@ def main() -> None:
                 "result_status": col_result,
                 "flags": col_flags,
                 "evidence": col_evid,
+                "determination_basis": col_basis,
+                "n_a_reason": col_na_reason,
             },
         },
         "app_metadata": APP_METADATA,
@@ -394,7 +439,17 @@ def main() -> None:
             "evidenced_non_compliant": evidenced_non_compliant,
             "evidence_not_found_non_compliant": evidence_not_found,
             "not_applicable": not_applicable,
+            "not_applicable_dynamic_analysis": dynamic_na,
+            "not_applicable_signed_ipa": signed_ipa_na,
+            "not_applicable_backend_evidence": backend_na,
+            "not_applicable_organizational_evidence": organizational_na,
+            "not_applicable_manual_review": manual_na,
+            "not_applicable_other": other_na,
             "overall_compliance_pct": overall_compliance_pct,
+            "evidence_supported_compliance_pct": overall_compliance_pct,
+            "conclusive_evidential_determinations": conclusive_determinations,
+            "conclusive_evidence_coverage_pct": conclusive_evidence_coverage_pct,
+            "conservative_determination_pct": conservative_determination_pct,
         },
         "category_metrics": cat_stats,
         "prevalence_rubric": PREVALENCE_RUBRIC,

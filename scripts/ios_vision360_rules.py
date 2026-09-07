@@ -35,12 +35,12 @@ EXACT_RULES: Dict[str, Rule] = {
     "has_env_specific_api_credentials_configured": Rule("environment_configuration"),
     "has_separate_environment_credentials": Rule("separate_environment_credentials", False),
     "has_authenticated_scoped_ios_ipc": Rule("authenticated_scoped_ios_ipc", False),
-    "has_unique_api_key_per_app_instance": Rule("unique_api_key_per_app_instance", False),
-    "has_api_key_usage_restrictions": Rule("api_key_usage_restrictions", False),
-    "ios_certificate_pinning": Rule("certificate_pinning"),
-    "has_https_with_cert_pinning": Rule("certificate_pinning"),
-    "has_ssl_cert_pinning_implemented": Rule("certificate_pinning"),
-    "has_tls_ssl_pinning_implemented": Rule("certificate_pinning"),
+    "has_unique_api_key_per_app_instance": Rule("unique_api_key_per_app_instance", False, "backend_evidence"),
+    "has_api_key_usage_restrictions": Rule("api_key_usage_restrictions", False, "backend_evidence"),
+    "ios_certificate_pinning": Rule("certificate_pinning", False),
+    "has_https_with_cert_pinning": Rule("certificate_pinning", False),
+    "has_ssl_cert_pinning_implemented": Rule("certificate_pinning", False),
+    "has_tls_ssl_pinning_implemented": Rule("certificate_pinning", False),
     "ios_insecure_random": Rule("insecure_random"),
     "ios_get_task_allow": Rule("get_task_allow", requires="signed_ipa"),
     "has_get_task_allow_disabled": Rule("get_task_allow_disabled", requires="signed_ipa"),
@@ -53,14 +53,14 @@ EXACT_RULES: Dict[str, Rule] = {
     "ios_ats_arbitrary_loads": Rule("ats_arbitrary_loads"),
     "has_ats_secure_configuration": Rule("ats_secure_configuration"),
     "has_no_unjustified_ats_exceptions": Rule("ats_secure_configuration"),
-    "ios_sensitive_backup_exposure": Rule("backup_exposure", False),
+    "ios_sensitive_backup_exposure": Rule("backup_exposure", False, "manual_review"),
     "has_webview_components": Rule("webview"),
     "has_webview_javascript": Rule("webview_javascript"),
     "has_webview_file_scheme": Rule("webview_file_access"),
     "has_webview_remote_content": Rule("webview_remote_content"),
-    "has_secure_wkwebview_configuration": Rule("secure_webview_configuration"),
-    "has_wkwebview_navigation_allowlist": Rule("webview_navigation_validation"),
-    "has_wkwebview_safe_message_handlers": Rule("safe_webview_message_handlers"),
+    "has_secure_wkwebview_configuration": Rule("secure_webview_configuration", False),
+    "has_wkwebview_navigation_allowlist": Rule("webview_navigation_validation", False),
+    "has_wkwebview_safe_message_handlers": Rule("safe_webview_message_handlers", False),
     "has_insecure_http_based_webview_communication": Rule("insecure_http"),
     "has_keychain_secure_accessibility": Rule("keychain_accessibility"),
     "has_keychain_device_only_protection": Rule("keychain_device_only"),
@@ -68,7 +68,7 @@ EXACT_RULES: Dict[str, Rule] = {
     "has_auth_keys_stored_in_secure_hardware": Rule("secure_enclave"),
     "has_sensitive_data_encrypted_with_os_keystore": Rule("keychain"),
     "has_secure_local_authentication": Rule("biometric"),
-    "has_biometric_keychain_binding": Rule("biometric_keychain_binding"),
+    "has_biometric_keychain_binding": Rule("biometric_keychain_binding", False),
     "has_jailbreak_detection": Rule("jailbreak_detection"),
     "has_app_attest": Rule("app_attest"),
     "has_devicecheck": Rule("device_check"),
@@ -81,10 +81,10 @@ EXACT_RULES: Dict[str, Rule] = {
     "has_ios_ipc_authorization_checks": Rule("ios_ipc_authorization_checks", False),
     "has_universal_links_validation": Rule("universal_links_validation"),
     "has_url_scheme_input_validation": Rule("url_scheme_validation"),
-    "has_secure_pasteboard_usage": Rule("secure_pasteboard"),
-    "has_app_switcher_snapshot_protection": Rule("background_redaction"),
-    "has_clears_ui_on_background": Rule("background_redaction"),
-    "has_screen_capture_protection": Rule("screen_capture_protection"),
+    "has_secure_pasteboard_usage": Rule("secure_pasteboard", False),
+    "has_app_switcher_snapshot_protection": Rule("background_redaction", False),
+    "has_clears_ui_on_background": Rule("background_redaction", False),
+    "has_screen_capture_protection": Rule("screen_capture_protection", False),
     "has_notification_data_redaction": Rule("notification_redaction"),
     "has_notification_leaks_sensitive_data": Rule("notification_sensitive_data"),
     "has_secure_notifications": Rule("notification_redaction"),
@@ -93,7 +93,7 @@ EXACT_RULES: Dict[str, Rule] = {
     "has_clears_cookies_on_logout": Rule("cookie_cleanup"),
     "has_clears_local_session_data_on_logout": Rule("logout_cleanup"),
     "has_sensitive_memory_cleanup": Rule("sensitive_memory_cleanup", False),
-    "has_logout_invalidates_server_session": Rule("server_logout", False),
+    "has_logout_invalidates_server_session": Rule("server_logout", False, "backend_evidence"),
     "has_token_based_auth": Rule("token_auth"),
     "has_jwt_tokens": Rule("jwt"),
     "has_oauth2_authentication": Rule("oauth"),
@@ -132,7 +132,7 @@ EXACT_RULES: Dict[str, Rule] = {
 TOKEN_RULES: Tuple[Tuple[str, Rule], ...] = (
     ("hardcoded", Rule("hardcoded_secret")),
     ("weak_crypto", Rule("weak_crypto")),
-    ("ssl_pinning", Rule("certificate_pinning")),
+    ("ssl_pinning", Rule("certificate_pinning", False)),
     ("certificate_pinning", Rule("certificate_pinning")),
     ("insecure_http", Rule("insecure_http")),
 )
@@ -164,6 +164,22 @@ def manual_category(flag_id: str) -> Tuple[str, str]:
     return "manual", "manual review or evidence not represented by the current static-analysis artifacts"
 
 
+def capability_for_flag(flag_id: str) -> Optional[str]:
+    """Return the essential non-static capability needed to assess a flag."""
+    rule = rule_for(flag_id)
+    if rule and rule.requires:
+        return rule.requires
+    if rule is not None:
+        return None
+    category, _ = manual_category(flag_id)
+    return {
+        "runtime": "runtime_device_test",
+        "backend": "backend_evidence",
+        "organizational": "organizational_evidence",
+        "manual": "manual_review",
+    }[category]
+
+
 def evaluate_flag(
     flag_id: str,
     signals: Mapping[str, Optional[bool]],
@@ -172,8 +188,25 @@ def evaluate_flag(
 ) -> Tuple[str, str, str, List[Dict[str, Any]], str]:
     """Return state, summary, notes, evidence and evaluation method."""
     rule = rule_for(flag_id)
+    capabilities = capabilities or {}
     if rule is None:
         category, required_evidence = manual_category(flag_id)
+        required_capability = capability_for_flag(flag_id)
+        if required_capability and not capabilities.get(required_capability, False):
+            capability_descriptions = {
+                "runtime_device_test": "dynamic iOS execution on a supported runtime device",
+                "backend_evidence": "backend configuration, server logs, or an authenticated integration test",
+                "organizational_evidence": "organizational policy, process, or documentary evidence",
+                "manual_review": "manual evidence not represented by the automated static-analysis artifacts",
+            }
+            return (
+                "out_of_scope",
+                "NA",
+                f"Not evaluated: this check requires {capability_descriptions[required_capability]}, "
+                "which is outside the predefined automated static audit profile.",
+                [],
+                f"out_of_scope:{required_capability}",
+            )
         return (
             "not_detected",
             "NO",
@@ -182,12 +215,16 @@ def evaluate_flag(
             f"manual:{category}",
         )
 
-    capabilities = capabilities or {}
     if rule.requires and not capabilities.get(rule.requires, False):
+        reason = (
+            "a signed production IPA, but the pipeline intentionally supplies an unsigned IPA"
+            if rule.requires == "signed_ipa"
+            else f"the unavailable {rule.requires} assessment capability"
+        )
         return (
             "out_of_scope",
             "NA",
-            f"Not evaluated: this check requires {rule.requires}, but the pipeline intentionally supplies an unsigned IPA.",
+            f"Not evaluated: this check requires {reason}.",
             [],
             f"out_of_scope:{rule.requires}",
         )
